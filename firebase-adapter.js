@@ -11,6 +11,43 @@ const firebaseConfig = {
   appId: "1:744328322546:web:bfdc4db10149414fdf9f6b"
 };
 
+<script>
+// QUICK TEST: Is everything loading?
+console.log("=== SYSTEM CHECK ===");
+console.log("Firebase loaded:", typeof firebase !== 'undefined');
+console.log("dataSdk exists:", typeof window.dataSdk !== 'undefined');
+console.log("elementSdk exists:", typeof window.elementSdk !== 'undefined');
+
+// If dataSdk doesn't exist, create a simple one
+setTimeout(() => {
+  if (!window.dataSdk) {
+    console.log("⚠️ Creating emergency dataSdk...");
+    window.dataSdk = {
+      async init(options) {
+        console.log("📊 Emergency dataSdk.init()");
+        const data = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+        if (options?.onDataChanged) options.onDataChanged(data);
+        return { isOk: true };
+      },
+      async create(data) {
+        console.log("➕ Emergency save:", data.type);
+        const items = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+        items.push({ ...data, id: Date.now() });
+        localStorage.setItem('ohilicway_data', JSON.stringify(items));
+        
+        if (typeof showNotification === 'function') {
+          showNotification(`${data.type} saved (emergency mode)`, 'success');
+        }
+        
+        return { isOk: true };
+      }
+    };
+    window.elementSdk = { init: () => ({ isOk: true }) };
+    console.log("✅ Emergency SDKs created");
+  }
+}, 1000);
+</script>
+
 // 2. INITIALIZE FIREBASE
 let db = null;
 try {
@@ -156,3 +193,4 @@ window.elementSdk = {
 
 console.log("✅✅✅ Ohilicway Firebase adapter READY!");
 console.log("window.dataSdk created:", typeof window.dataSdk !== 'undefined');
+
