@@ -1,7 +1,7 @@
-// ===== FIREBASE-ONLY ADAPTER =====
-console.log("🔥 FIREBASE-ONLY adapter loading...");
+// ===== OHILICWAY FIREBASE ADAPTER =====
+console.log("🚀 Loading Ohilicway Firebase adapter...");
 
-// Configuration (YOUR ACTUAL VALUES)
+// 1. YOUR FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyBeMa8R95fGULSNaF-VvXCw7UD5JnKwVUU",
   authDomain: "ohilicway-business.firebaseapp.com",
@@ -11,112 +11,101 @@ const firebaseConfig = {
   appId: "1:744328322546:web:bfdc4db10149414fdf9f6b"
 };
 
-// FORCE Firebase initialization
-let firebaseReady = false;
+// 2. INITIALIZE FIREBASE
 let db = null;
-
-function initializeFirebase() {
-  try {
-    if (typeof firebase === 'undefined') {
-      console.error("❌ Firebase not loaded. Check script tags.");
-      return false;
-    }
-    
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-      console.log("✅ Firebase app initialized");
-    }
-    
-    db = firebase.firestore();
-    
-    // TEST connection immediately
-    db.collection("test").doc("connection").set({
-      test: true,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
-      console.log("✅ Firebase connection TEST PASSED");
-      firebaseReady = true;
-      
-      // Delete test document
-      db.collection("test").doc("connection").delete();
-    }).catch(error => {
-      console.error("❌ Firebase connection FAILED:", error);
-      alert("FIREBASE ERROR: Data won't save! Check console.");
-    });
-    
-    return true;
-  } catch (error) {
-    console.error("❌ Firebase initialization ERROR:", error);
-    return false;
+try {
+  if (typeof firebase === 'undefined') {
+    throw new Error("Firebase scripts not loaded!");
   }
+  
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+    console.log("✅ Firebase initialized");
+  }
+  
+  db = firebase.firestore();
+  console.log("✅ Firestore database ready");
+  
+} catch (error) {
+  console.error("❌ Firebase setup error:", error);
+  alert("FIREBASE ERROR: Check browser console");
 }
 
-// Initialize immediately
-initializeFirebase();
-
-// ===== STRICT FIREBASE-ONLY SDK =====
+// 3. CREATE THE dataSdk YOUR APP NEEDS
 window.dataSdk = {
   async init(options) {
-    console.log("📊 Firebase dataSdk.init() called");
+    console.log("📊 dataSdk.init() called - Firebase version");
     
-    if (!firebaseReady) {
-      console.log("⏳ Waiting for Firebase...");
-      setTimeout(() => this.init(options), 1000);
-      return { isOk: false, error: "Firebase not ready" };
-    }
-    
-    if (options && options.onDataChanged) {
-      // REAL-TIME Firestore listener
-      db.collection("transactions")
-        .orderBy("timestamp", "desc")
-        .onSnapshot(snapshot => {
-          const data = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          console.log(`📥 Firebase real-time update: ${data.length} records`);
-          options.onDataChanged(data);
-        }, error => {
-          console.error("❌ Firestore listener error:", error);
-        });
-    }
-    
-    return { isOk: true };
-  },
-  
-  async create(data) {
-    console.log(`➕ Firebase CREATE: ${data.type}`, data);
-    
-    if (!firebaseReady || !db) {
-      console.error("❌ Firebase not ready for create");
-      showNotification("Database not ready. Try again.", "error");
-      return { isOk: false, error: "Firebase not ready" };
+    if (!db) {
+      console.error("❌ No database connection");
+      return { isOk: false, error: "Database not connected" };
     }
     
     try {
-      // ENSURE timestamp exists
+      if (options && options.onDataChanged) {
+        // Listen to ALL business data in real-time
+        db.collection("business_data")
+          .orderBy("timestamp", "desc")
+          .onSnapshot(snapshot => {
+            const data = snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+            console.log(`📥 Firebase update: ${data.length} records`);
+            options.onDataChanged(data);
+          }, error => {
+            console.error("❌ Firestore listener error:", error);
+          });
+      }
+      
+      return { isOk: true };
+      
+    } catch (error) {
+      console.error("❌ dataSdk.init() error:", error);
+      return { isOk: false, error: error.message };
+    }
+  },
+  
+  async create(data) {
+    console.log(`➕ FIREBASE CREATE: ${data.type}`, data.product_name || data.expense_name);
+    
+    if (!db) {
+      console.error("❌ Cannot save: No database");
+      showNotification("Database error!", "error");
+      return { isOk: false, error: "No database" };
+    }
+    
+    try {
+      // Ensure timestamp exists
       if (!data.timestamp) data.timestamp = Date.now();
       
-      const docRef = await db.collection("transactions").add({
+      // Save to Firebase Firestore
+      const docRef = await db.collection("business_data").add({
         ...data,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       
-      console.log("✅ SAVED TO FIREBASE! ID:", docRef.id);
-      showNotification(`${data.type} saved to cloud!`, "success");
+      console.log("✅✅✅ SAVED TO FIREBASE! Document ID:", docRef.id);
+      
+      // Show success
+      if (typeof showNotification === 'function') {
+        showNotification(`✅ ${data.type} saved to cloud!`, 'success');
+      } else {
+        alert(`✅ ${data.type} saved to cloud database!`);
+      }
       
       return { isOk: true, id: docRef.id };
       
     } catch (error) {
-      console.error("❌ FIREBASE SAVE ERROR:", error);
-      showNotification("Failed to save to cloud!", "error");
+      console.error("❌❌❌ FIREBASE SAVE ERROR:", error);
       
-      // LAST RESORT: Save to localStorage but warn user
-      const items = JSON.parse(localStorage.getItem('ohilicway_firebase_fallback') || '[]');
-      items.push({ ...data, id: Date.now(), firebase_failed: true });
-      localStorage.setItem('ohilicway_firebase_fallback', JSON.stringify(items));
-      console.log("⚠️ Saved to localStorage fallback");
+      // EMERGENCY FALLBACK to localStorage
+      const emergencyData = JSON.parse(localStorage.getItem('ohilicway_emergency') || '[]');
+      emergencyData.push({ ...data, id: Date.now(), firebase_failed: true });
+      localStorage.setItem('ohilicway_emergency', JSON.stringify(emergencyData));
+      
+      alert(`⚠️ Saved locally (Firebase error: ${error.message})`);
       
       return { isOk: false, error: error.message };
     }
@@ -124,10 +113,10 @@ window.dataSdk = {
   
   async update(id, data) {
     console.log("✏️ Firebase UPDATE:", id);
-    if (!firebaseReady) return { isOk: false };
+    if (!db) return { isOk: false };
     
     try {
-      await db.collection("transactions").doc(id).update({
+      await db.collection("business_data").doc(id).update({
         ...data,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -140,32 +129,19 @@ window.dataSdk = {
   
   async delete(id) {
     console.log("🗑️ Firebase DELETE:", id);
-    if (!firebaseReady) return { isOk: false };
+    if (!db) return { isOk: false };
     
     try {
-      await db.collection("transactions").doc(id).delete();
+      await db.collection("business_data").doc(id).delete();
       return { isOk: true };
     } catch (error) {
       console.error("Delete error:", error);
       return { isOk: false, error: error.message };
     }
-  },
-  
-  // Special method to migrate localStorage to Firebase
-  async migrateToFirebase() {
-    const localData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-    console.log(`🔄 Migrating ${localData.length} items to Firebase`);
-    
-    for (const item of localData) {
-      await this.create(item);
-    }
-    
-    localStorage.removeItem('ohilicway_data');
-    console.log("✅ Migration complete!");
   }
 };
 
-// Element SDK
+// 4. CREATE elementSdk (simplified)
 window.elementSdk = {
   init: (config) => {
     console.log("🎨 elementSdk.init() called");
@@ -178,4 +154,5 @@ window.elementSdk = {
   getConfig: () => ({ isOk: true, config: {} })
 };
 
-console.log("✅ Firebase-only adapter READY");
+console.log("✅✅✅ Ohilicway Firebase adapter READY!");
+console.log("window.dataSdk created:", typeof window.dataSdk !== 'undefined');
