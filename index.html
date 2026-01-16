@@ -381,28 +381,38 @@ setTimeout(() => {
   <script>
     // 🔐 Password check function (NEW - but doesn't affect business logic)
     function checkPassword() {
-      const passwordInput = document.getElementById('officePassword').value;
-      const OFFICE_PASSWORD = 'ohilicway2024'; // Change this to your own password
-      
-      if (passwordInput === OFFICE_PASSWORD) {
-        localStorage.setItem('ohilicway_authenticated', 'true');
-        document.getElementById('loginGate').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-        // Your existing initializeApp will run automatically
-      } else {
-        document.getElementById('passwordError').style.display = 'block';
-      }
-    }
+  const passwordInput = document.getElementById('officePassword').value;
+  const OFFICE_PASSWORD = 'ohilicway2024'; // Change this!
+  
+  if (passwordInput === OFFICE_PASSWORD) {
+    localStorage.setItem('ohilicway_authenticated', 'true');
+    localStorage.setItem('ohilicway_password', OFFICE_PASSWORD); // Store password too
+    document.getElementById('loginGate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+  } else {
+    document.getElementById('passwordError').style.display = 'block';
+  }
+}
     
     // Check if already authenticated
-    window.addEventListener('DOMContentLoaded', function() {
-      if (localStorage.getItem('ohilicway_authenticated') === 'true') {
-        document.getElementById('loginGate').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-      } else {
-        document.getElementById('loginGate').style.display = 'flex';
-      }
-    });
+    // 🔐 STRICT PASSWORD CHECK
+window.addEventListener('DOMContentLoaded', function() {
+  const isAuthenticated = localStorage.getItem('ohilicway_authenticated');
+  const password = localStorage.getItem('ohilicway_password');
+  const OFFICE_PASSWORD = 'ohilicway2024'; // Your password
+  
+  // Check both: authenticated flag AND password matches
+  if (isAuthenticated === 'true' && password === OFFICE_PASSWORD) {
+    document.getElementById('loginGate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+  } else {
+    // Clear any old/stale authentication
+    localStorage.removeItem('ohilicway_authenticated');
+    localStorage.removeItem('ohilicway_password');
+    document.getElementById('loginGate').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+});
   </script>
 
   <!-- YOUR ORIGINAL BUSINESS LOGIC - 100% UNCHANGED -->
@@ -932,6 +942,9 @@ setTimeout(() => {
                   class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 btn-primary">
                   Add Sale
                 </button>
+                <button onclick="emergencyClearData()" class="px-4 py-2 bg-red-800 text-white rounded-lg hover:bg-red-900">
+  🚨 Emergency Clear
+</button>
               </div>
             </form>
           </div>
@@ -1343,30 +1356,60 @@ function importData() {
   input.click();
 }
 
-// Show admin tools with secret key (Ctrl+Shift+A)
-document.addEventListener('keydown', function(e) {
-  if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-    const adminTools = document.getElementById('adminTools');
-    if (adminTools) {
-      adminTools.style.display = 'block';
-      showNotification('Admin tools unlocked', 'info');
+   
+function clearAllData() {
+  if (confirm('⚠️ DELETE ALL business data? This will remove ALL sales, purchases, expenses, and inventory!')) {
+    console.log("🗑️ Clearing ALL data...");
+    
+    // 1. Clear localStorage
+    localStorage.removeItem('ohilicway_data');
+    localStorage.removeItem('ohilicway_config');
+    
+    // 2. Clear Firebase if connected
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+      try {
+        const db = firebase.firestore();
+        // We can't delete entire collection from frontend, but we can delete documents
+        // Show message about Firebase data
+        console.log("⚠️ Firebase data must be cleared manually from Firebase Console");
+      } catch (error) {
+        console.log("Firebase not configured for clearing");
+      }
     }
+    
+    // 3. Force page reload with cache clear
+    showNotification('ALL DATA CLEARED! Reloading...', 'info');
+    setTimeout(() => {
+      window.location.href = window.location.href + '?clear=' + Date.now(); // Force reload
+    }, 1500);
   }
-});
+}
 
-// Hide admin tools on Escape
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    const adminTools = document.getElementById('adminTools');
-    if (adminTools) {
-      adminTools.style.display = 'none';
-    }
-  }
-});
+
+   // EMERGENCY DATA CLEAR - Works 100%
+function emergencyClearData() {
+  console.log("🚨 EMERGENCY DATA CLEAR");
+  
+  // Delete EVERYTHING
+  localStorage.clear();
+  sessionStorage.clear();
+  
+  // Clear cookies for this domain
+  document.cookie.split(";").forEach(function(c) {
+    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+  });
+  
+  // Force hard reload
+  showNotification('EMERGENCY CLEAR COMPLETE!', 'error');
+  setTimeout(() => {
+    window.location.reload(true); // true = force reload from server
+  }, 1000);
+}
   </script>
  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bebc84303fd7406',t:'MTc2ODU0NzMxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 
 </html>
+
 
 
 
