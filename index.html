@@ -14,33 +14,137 @@
   <!-- 🔧 WITH THESE 5 LINES: -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-<script src="./firebase-adapter.js"></script> <!-- New SDK implementation -->
+<script src="firebase-adapter.js"></script> <!-- New SDK implementation -->
   <!-- 🔧 END OF CHANGES - REST IS YOUR ORIGINAL CODE -->
 
-  <!-- TEMPORARY FIX - Add this line AFTER firebase-adapter.js -->
-<script>
-// Force localStorage fallback if Firebase fails
-setTimeout(() => {
-  if (!window.dataSdk) {
-    console.log("⚠️ Firebase failed, using localStorage");
-    window.dataSdk = {
-      async init(options) {
-        const data = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-        if (options?.onDataChanged) options.onDataChanged(data);
-        return { isOk: true };
-      },
-      async create(data) {
-        const items = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-        items.push({ ...data, id: Date.now() });
-        localStorage.setItem('ohilicway_data', JSON.stringify(items));
-        return { isOk: true };
-      }
-    };
-    window.elementSdk = { init: () => ({ isOk: true }) };
-  }
-}, 1000);
-</script>
+ <script>
+// COMPLETE FALLBACK SCRIPT - Add this AFTER line 25
+console.log("🔄 Loading fallback data system...");
 
+// Store callback for UI updates
+let dataUpdateCallback = null;
+let allData = [];
+
+// Initialize data system
+async function initDataSystem() {
+  console.log("📊 Initializing data system...");
+  
+  // Load existing data
+  allData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+  console.log(`📥 Loaded ${allData.length} records`);
+  
+  // Create the SDKs your app expects
+  window.dataSdk = {
+    async init(options) {
+      console.log("✅ dataSdk.init() called");
+      
+      if (options && options.onDataChanged) {
+        dataUpdateCallback = options.onDataChanged;
+        // Send current data to dashboard
+        options.onDataChanged(allData);
+      }
+      return { isOk: true };
+    },
+    
+    async create(data) {
+      console.log("➕ Creating:", data.type, data.product_name || data.expense_name);
+      
+      // Add to data array
+      const newItem = { ...data, id: Date.now() };
+      allData.push(newItem);
+      
+      // Save to localStorage
+      localStorage.setItem('ohilicway_data', JSON.stringify(allData));
+      
+      // Update dashboard UI
+      if (dataUpdateCallback) {
+        dataUpdateCallback(allData);
+      }
+      
+      // Show success message
+      showSuccessNotification(`${data.type} added successfully!`);
+      
+      return { isOk: true, id: newItem.id };
+    },
+    
+    async update(id, data) {
+      console.log("✏️ Updating:", id);
+      const index = allData.findIndex(item => item.id === id);
+      if (index !== -1) {
+        allData[index] = { ...allData[index], ...data };
+        localStorage.setItem('ohilicway_data', JSON.stringify(allData));
+        if (dataUpdateCallback) dataUpdateCallback(allData);
+      }
+      return { isOk: true };
+    },
+    
+    async delete(id) {
+      console.log("🗑️ Deleting:", id);
+      allData = allData.filter(item => item.id !== id);
+      localStorage.setItem('ohilicway_data', JSON.stringify(allData));
+      if (dataUpdateCallback) dataUpdateCallback(allData);
+      return { isOk: true };
+    }
+  };
+  
+  // Create element SDK
+  window.elementSdk = {
+    init: () => {
+      console.log("✅ elementSdk.init() called");
+      return { isOk: true };
+    },
+    setConfig: () => ({ isOk: true }),
+    getConfig: () => ({ isOk: true, config: {} })
+  };
+  
+  console.log("✅ All SDKs ready!");
+}
+
+// Helper function for notifications
+function showSuccessNotification(message) {
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #10B981;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    z-index: 9999;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideIn 0.3s ease-out;
+  `;
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  // Remove after 3 seconds
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    notification.style.transform = 'translateY(-10px)';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
+
+// Start the system
+document.addEventListener('DOMContentLoaded', function() {
+  console.log("🚀 DOM loaded, starting data system...");
+  initDataSystem();
+  
+  // Also override the existing initializeApp to ensure it works
+  const originalInitializeApp = window.initializeApp;
+  if (originalInitializeApp) {
+    window.initializeApp = async function() {
+      console.log("🎯 Overridden initializeApp called");
+      await initDataSystem();
+      return originalInitializeApp.apply(this, arguments);
+    };
+  }
+});
+</script>
+  
   <style>
     body {
       box-sizing: border-box;
@@ -1137,4 +1241,5 @@ Generated automatically by Ohilicway System.
  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bebc84303fd7406',t:'MTc2ODU0NzMxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 
 </html>
+
 
