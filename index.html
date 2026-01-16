@@ -323,6 +323,24 @@ setTimeout(() => {
     </div><!-- Action Buttons -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"><button id="addSaleBtn" class="bg-blue-600 text-white px-6 py-4 rounded-lg font-semibold text-lg btn-primary hover:bg-blue-700"> 🛒 Add Sale </button> <button id="addStockBtn" class="bg-purple-600 text-white px-6 py-4 rounded-lg font-semibold text-lg btn-primary hover:bg-purple-700"> 📦 Add Stock </button> <button id="addExpenseBtn" class="bg-red-600 text-white px-6 py-4 rounded-lg font-semibold text-lg btn-primary hover:bg-red-700"> 💸 Add Expense </button>
     </div><!-- Inventory Section -->
+    <!-- Admin Tools (Hidden - Press Ctrl+Shift+A to show) -->
+<div id="adminTools" style="display: none; margin-top: 20px;">
+  <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+    <h4 class="font-bold text-red-700 mb-2">⚠️ Admin Tools</h4>
+    <p class="text-sm text-red-600 mb-3">Only visible when unlocked (Ctrl+Shift+A)</p>
+    <div class="flex space-x-2">
+      <button onclick="clearAllData()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+        🗑️ Clear All Data
+      </button>
+      <button onclick="exportData()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        📤 Export Backup
+      </button>
+      <button onclick="importData()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+        📥 Import Backup
+      </button>
+    </div>
+  </div>
+</div>
     <div class="bg-white rounded-lg p-6 card-shadow mb-6">
      <h3 class="text-lg font-semibold text-slate-900 mb-4">📦 Inventory</h3>
      <div class="overflow-x-auto">
@@ -555,23 +573,32 @@ setTimeout(() => {
     }
 
     function calculateStats() {
-      const todayStart = getTodayStart();
-      const monthStart = getMonthStart();
+  console.log("📊 DEBUG: Calculating stats for", allData.length, "items");
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0]; // "2024-01-16"
+  
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  monthStart.setHours(0, 0, 0, 0);
+  
+  console.log("📊 DEBUG: Today's date string:", todayStr);
+  console.log("📊 DEBUG: Month start:", monthStart.toISOString().split('T')[0]);
 
-      const stats = {
-        revenueToday: 0,
-        revenueMonth: 0,
-        expensesToday: 0,
-        expensesMonth: 0,
-        grossProfitToday: 0,
-        grossProfitMonth: 0,
-        capitalToday: 0,
-        capitalMonth: 0,
-        salesCount: 0,
-        purchasesCount: 0,
-        expensesCount: 0,
-        inventory: {}
-      };
+  const stats = {
+    revenueToday: 0,
+    revenueMonth: 0,
+    expensesToday: 0,
+    expensesMonth: 0,
+    grossProfitToday: 0,
+    grossProfitMonth: 0,
+    capitalToday: 0,
+    capitalMonth: 0,
+    salesCount: 0,
+    purchasesCount: 0,
+    expensesCount: 0,
+    inventory: {}
+  };
 
       // First pass: build inventory with cost prices
       allData.forEach(item => {
@@ -586,9 +613,14 @@ setTimeout(() => {
 
       // Second pass: calculate sales and gross profit
       allData.forEach(item => {
-        const itemDate = new Date(item.date).getTime();
-        const isToday = itemDate >= todayStart;
-        const isThisMonth = itemDate >= monthStart;
+  const itemDateStr = item.date; // Should be "2024-01-16"
+  const itemDate = new Date(itemDateStr);
+  const itemTimestamp = itemDate.getTime();
+  
+  const isToday = itemDateStr === todayStr;
+  const isThisMonth = itemTimestamp >= monthStart.getTime();
+  
+  console.log(`📊 DEBUG: Item ${item.type} date: ${itemDateStr}, Today: ${isToday}, ThisMonth: ${isThisMonth}`);
 
         if (item.type === 'sale') {
           const revenue = item.quantity * item.price;
@@ -1244,10 +1276,98 @@ Generated automatically by Ohilicway System.
 
     // Initialize on load
     initializeApp();
+   // ===== ADMIN FUNCTIONS =====
+function clearAllData() {
+  if (confirm('⚠️ DELETE ALL business data? Employees will lose all sales, purchases, and expenses!')) {
+    // Clear localStorage
+    localStorage.removeItem('ohilicway_data');
+    localStorage.removeItem('ohilicway_config');
+    
+    // Show message
+    showNotification('All data cleared! Page will reload...', 'info');
+    
+    // Reload after 2 seconds
+    setTimeout(() => {
+      location.reload();
+    }, 2000);
+  }
+}
+
+function exportData() {
+  const data = {
+    business_data: JSON.parse(localStorage.getItem('ohilicway_data') || '[]'),
+    config: JSON.parse(localStorage.getItem('ohilicway_config') || '{}'),
+    export_date: new Date().toISOString()
+  };
+  
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ohilicway-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  
+  showNotification('Backup exported successfully!', 'success');
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  
+  input.onchange = function(e) {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = function(event) {
+      try {
+        const data = JSON.parse(event.target.result);
+        
+        if (data.business_data) {
+          localStorage.setItem('ohilicway_data', JSON.stringify(data.business_data));
+        }
+        if (data.config) {
+          localStorage.setItem('ohilicway_config', JSON.stringify(data.config));
+        }
+        
+        showNotification('Data imported successfully! Reloading...', 'success');
+        setTimeout(() => location.reload(), 1000);
+      } catch (error) {
+        showNotification('Invalid backup file', 'error');
+      }
+    };
+    
+    reader.readAsText(file);
+  };
+  
+  input.click();
+}
+
+// Show admin tools with secret key (Ctrl+Shift+A)
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+    const adminTools = document.getElementById('adminTools');
+    if (adminTools) {
+      adminTools.style.display = 'block';
+      showNotification('Admin tools unlocked', 'info');
+    }
+  }
+});
+
+// Hide admin tools on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const adminTools = document.getElementById('adminTools');
+    if (adminTools) {
+      adminTools.style.display = 'none';
+    }
+  }
+});
   </script>
  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bebc84303fd7406',t:'MTc2ODU0NzMxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 
 </html>
+
 
 
 
