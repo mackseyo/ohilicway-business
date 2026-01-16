@@ -17,6 +17,30 @@
 <script src="./firebase-adapter.js"></script> <!-- New SDK implementation -->
   <!-- 🔧 END OF CHANGES - REST IS YOUR ORIGINAL CODE -->
 
+  <!-- TEMPORARY FIX - Add this line AFTER firebase-adapter.js -->
+<script>
+// Force localStorage fallback if Firebase fails
+setTimeout(() => {
+  if (!window.dataSdk) {
+    console.log("⚠️ Firebase failed, using localStorage");
+    window.dataSdk = {
+      async init(options) {
+        const data = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+        if (options?.onDataChanged) options.onDataChanged(data);
+        return { isOk: true };
+      },
+      async create(data) {
+        const items = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+        items.push({ ...data, id: Date.now() });
+        localStorage.setItem('ohilicway_data', JSON.stringify(items));
+        return { isOk: true };
+      }
+    };
+    window.elementSdk = { init: () => ({ isOk: true }) };
+  }
+}, 1000);
+</script>
+
   <style>
     body {
       box-sizing: border-box;
@@ -1113,3 +1137,4 @@ Generated automatically by Ohilicway System.
  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bebc84303fd7406',t:'MTc2ODU0NzMxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 
 </html>
+
