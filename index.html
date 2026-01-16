@@ -4,7 +4,40 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ohilicway Business System</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS with fallbacks -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<style>
+  /* Emergency backup styles if CDN fails */
+  .hidden { display: none !important; }
+  .flex { display: flex !important; }
+  .grid { display: grid !important; }
+  .block { display: block !important; }
+  .bg-white { background: white !important; }
+  .bg-slate-50 { background: #f8fafc !important; }
+  .bg-slate-100 { background: #f1f5f9 !important; }
+  .bg-blue-600 { background: #2563eb !important; }
+  .bg-red-600 { background: #dc2626 !important; }
+  .bg-green-600 { background: #16a34a !important; }
+  .bg-purple-600 { background: #7c3aed !important; }
+  .text-white { color: white !important; }
+  .text-slate-900 { color: #0f172a !important; }
+  .text-slate-600 { color: #475569 !important; }
+  .rounded-lg { border-radius: 0.5rem !important; }
+  .p-6 { padding: 1.5rem !important; }
+  .p-4 { padding: 1rem !important; }
+  .mb-6 { margin-bottom: 1.5rem !important; }
+  .mb-4 { margin-bottom: 1rem !important; }
+  .mb-2 { margin-bottom: 0.5rem !important; }
+  .mt-4 { margin-top: 1rem !important; }
+  .mt-2 { margin-top: 0.5rem !important; }
+  .font-bold { font-weight: 700 !important; }
+  .font-semibold { font-weight: 600 !important; }
+  .text-2xl { font-size: 1.5rem !important; }
+  .text-xl { font-size: 1.25rem !important; }
+  .text-lg { font-size: 1.125rem !important; }
+  .text-sm { font-size: 0.875rem !important; }
+  .text-xs { font-size: 0.75rem !important; }
+</style>
 <!-- Production warning is fine, ignore it -->
   
   <!-- 🔧 REPLACED THESE 2 LINES: -->
@@ -1274,6 +1307,7 @@ function emergencyClearData() {
  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bebc84303fd7406',t:'MTc2ODU0NzMxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 
 </html>
+
 
 
 
