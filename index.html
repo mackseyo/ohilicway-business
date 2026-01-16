@@ -1,0 +1,1115 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ohilicway Business System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 🔧 REPLACED THESE 2 LINES: -->
+  <!-- <script src="/_sdk/element_sdk.js"></script> -->
+  <!-- <script src="/_sdk/data_sdk.js"></script> -->
+  
+  <!-- 🔧 WITH THESE 5 LINES: -->
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
+  <script src="/firebase-config.js"></script>  <!-- Your Firebase config -->
+  <script src="/firebase-adapter.js"></script> <!-- New SDK implementation -->
+  <!-- 🔧 END OF CHANGES - REST IS YOUR ORIGINAL CODE -->
+
+  <style>
+    body {
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .slide-in {
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    .modal-backdrop {
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+    }
+    
+    .card-shadow {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-primary {
+      transition: all 0.2s ease;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    
+    .stat-card {
+      transition: all 0.2s ease;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="h-full bg-gradient-to-br from-slate-50 to-slate-100">
+  
+  <!-- 🔐 Add this simple password check (doesn't change your logic) -->
+  <div id="loginGate" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;">
+    <div style="max-width: 400px; width: 100%; text-align: center;">
+      <h2 style="font-size: 24px; margin-bottom: 20px;">🔒 Office Access Required</h2>
+      <p style="margin-bottom: 30px;">Enter the office password to access the business system</p>
+      <input type="password" id="officePassword" placeholder="Enter password" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px; font-size: 16px;">
+      <button onclick="checkPassword()" style="width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">Access System</button>
+      <p id="passwordError" style="color: red; margin-top: 10px; display: none;">Incorrect password. Contact administrator.</p>
+    </div>
+  </div>
+  
+  <div id="app" class="h-full w-full overflow-auto" style="display: none;"><!-- Header -->
+   <header class="bg-white border-b border-slate-200 sticky top-0 z-50 card-shadow">
+    <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+     <div class="flex justify-between items-center">
+      <div>
+       <h1 id="businessName" class="text-2xl font-bold text-slate-900">Ohilicway Business System</h1>
+       <p id="currentDate" class="text-sm text-slate-600 mt-1"></p>
+      </div>
+     </div>
+    </div>
+   </header><!-- Main Dashboard -->
+   <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8"><!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"><!-- Revenue Card -->
+     <div class="bg-white rounded-lg p-6 card-shadow stat-card">
+      <div class="flex items-center justify-between mb-2">
+       <h3 class="text-sm font-medium text-slate-600">Revenue</h3><span class="text-2xl">💰</span>
+      </div>
+      <p id="revenueToday" class="text-2xl font-bold text-slate-900 mb-1">0</p>
+      <p class="text-xs text-slate-500">Today</p>
+      <p id="revenueMonth" class="text-sm font-semibold text-slate-700 mt-2">0</p>
+      <p class="text-xs text-slate-500">This Month</p>
+     </div><!-- Expenses Card -->
+     <div class="bg-white rounded-lg p-6 card-shadow stat-card">
+      <div class="flex items-center justify-between mb-2">
+       <h3 class="text-sm font-medium text-slate-600">Expenses</h3><span class="text-2xl">💸</span>
+      </div>
+      <p id="expensesToday" class="text-2xl font-bold text-slate-900 mb-1">0</p>
+      <p class="text-xs text-slate-500">Today</p>
+      <p id="expensesMonth" class="text-sm font-semibold text-slate-700 mt-2">0</p>
+      <p class="text-xs text-slate-500">This Month</p>
+     </div><!-- Net Profit Card -->
+     <div class="bg-white rounded-lg p-6 card-shadow stat-card">
+      <div class="flex items-center justify-between mb-2">
+       <h3 class="text-sm font-medium text-slate-600">Net Profit</h3><span class="text-2xl">📈</span>
+      </div>
+      <p id="profitToday" class="text-2xl font-bold text-green-600 mb-1">0</p>
+      <p class="text-xs text-slate-500">Today</p>
+      <p id="profitMonth" class="text-sm font-semibold text-green-700 mt-2">0</p>
+      <p class="text-xs text-slate-500">This Month</p>
+     </div><!-- Stock Value Card -->
+     <div class="bg-white rounded-lg p-6 card-shadow stat-card">
+      <div class="flex items-center justify-between mb-2">
+       <h3 class="text-sm font-medium text-slate-600">Stock</h3><span class="text-2xl">📦</span>
+      </div>
+      <p id="stockValue" class="text-2xl font-bold text-slate-900 mb-1">0</p>
+      <p class="text-xs text-slate-500">Total Value</p>
+      <p id="stockItems" class="text-sm font-semibold text-slate-700 mt-2">0 items</p>
+      <p class="text-xs text-slate-500">In Stock</p>
+     </div>
+    </div><!-- Money Available from Sales -->
+    <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 card-shadow mb-6 border-2 border-green-200">
+     <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center space-x-3"><span class="text-3xl">💵</span>
+       <div>
+        <h3 class="text-lg font-semibold text-slate-900">Money Should Be Available</h3>
+        <p class="text-sm text-slate-600">Capital from sold products (wholesale cost)</p>
+       </div>
+      </div>
+     </div>
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+      <div class="bg-white rounded-lg p-4">
+       <p class="text-sm text-slate-600 mb-1">Today</p>
+       <p id="capitalToday" class="text-3xl font-bold text-green-600">0</p>
+      </div>
+      <div class="bg-white rounded-lg p-4">
+       <p class="text-sm text-slate-600 mb-1">This Month</p>
+       <p id="capitalMonth" class="text-3xl font-bold text-green-600">0</p>
+      </div>
+     </div>
+    </div><!-- Quick Summary -->
+    <div class="bg-white rounded-lg p-6 card-shadow mb-6">
+     <h3 class="text-lg font-semibold text-slate-900 mb-4">Quick Summary (Today)</h3>
+     <div class="grid grid-cols-3 gap-4 text-center">
+      <div>
+       <p id="salesCount" class="text-3xl font-bold text-blue-600">0</p>
+       <p class="text-sm text-slate-600 mt-1">Sales</p>
+      </div>
+      <div>
+       <p id="purchasesCount" class="text-3xl font-bold text-purple-600">0</p>
+       <p class="text-sm text-slate-600 mt-1">Purchases</p>
+      </div>
+      <div>
+       <p id="expensesCount" class="text-3xl font-bold text-red-600">0</p>
+       <p class="text-sm text-slate-600 mt-1">Expenses</p>
+      </div>
+     </div>
+    </div><!-- Report Section -->
+    <div class="bg-white rounded-lg p-6 card-shadow mb-6">
+     <h3 class="text-lg font-semibold text-slate-900 mb-4">📊 Generate Custom Report</h3>
+     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div><label class="block text-sm font-medium text-slate-700 mb-1">From Date</label> <input type="date" id="fromDate" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+      </div>
+      <div><label class="block text-sm font-medium text-slate-700 mb-1">To Date</label> <input type="date" id="toDate" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+      </div>
+      <div class="flex items-end"><button id="generateReportBtn" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg font-medium btn-primary hover:bg-green-700"> 📊 Generate Report </button>
+      </div>
+      <div class="flex items-end"><button id="sendReportBtn" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium btn-primary hover:bg-blue-700"> 📱 Send to WhatsApp </button>
+      </div>
+     </div><!-- Report Display Area -->
+     <div id="reportDisplay" class="hidden mt-6">
+      <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+       <h4 class="text-sm font-semibold text-slate-700 mb-2">Generated Report:</h4>
+       <pre id="reportContent" class="text-xs text-slate-900 whitespace-pre-wrap font-mono"></pre>
+      </div>
+     </div>
+    </div><!-- Action Buttons -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"><button id="addSaleBtn" class="bg-blue-600 text-white px-6 py-4 rounded-lg font-semibold text-lg btn-primary hover:bg-blue-700"> 🛒 Add Sale </button> <button id="addStockBtn" class="bg-purple-600 text-white px-6 py-4 rounded-lg font-semibold text-lg btn-primary hover:bg-purple-700"> 📦 Add Stock </button> <button id="addExpenseBtn" class="bg-red-600 text-white px-6 py-4 rounded-lg font-semibold text-lg btn-primary hover:bg-red-700"> 💸 Add Expense </button>
+    </div><!-- Inventory Section -->
+    <div class="bg-white rounded-lg p-6 card-shadow mb-6">
+     <h3 class="text-lg font-semibold text-slate-900 mb-4">📦 Inventory</h3>
+     <div class="overflow-x-auto">
+      <table class="w-full">
+       <thead>
+        <tr class="border-b border-slate-200">
+         <th class="text-left py-3 px-4 text-sm font-semibold text-slate-700">Product</th>
+         <th class="text-right py-3 px-4 text-sm font-semibold text-slate-700">In</th>
+         <th class="text-right py-3 px-4 text-sm font-semibold text-slate-700">Out</th>
+         <th class="text-right py-3 px-4 text-sm font-semibold text-slate-700">Available</th>
+         <th class="text-right py-3 px-4 text-sm font-semibold text-slate-700">Cost</th>
+         <th class="text-right py-3 px-4 text-sm font-semibold text-slate-700">Selling</th>
+        </tr>
+       </thead>
+       <tbody id="inventoryTable">
+        <tr>
+         <td colspan="6" class="text-center py-8 text-slate-500">No inventory data yet</td>
+        </tr>
+       </tbody>
+      </table>
+     </div>
+    </div><!-- Recent Transactions -->
+    <div class="bg-white rounded-lg p-6 card-shadow">
+     <h3 class="text-lg font-semibold text-slate-900 mb-4">📋 Recent Transactions</h3>
+     <div id="transactionsList" class="space-y-2">
+      <p class="text-center py-8 text-slate-500">No transactions yet</p>
+     </div>
+    </div>
+   </main><!-- Modal Container -->
+   <div id="modalContainer"></div><!-- Loading Indicator -->
+   <div id="loadingIndicator" class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
+     <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div><span class="text-slate-700 font-medium">Processing...</span>
+    </div>
+   </div>
+  </div>
+  
+  <script>
+    // 🔐 Password check function (NEW - but doesn't affect business logic)
+    function checkPassword() {
+      const passwordInput = document.getElementById('officePassword').value;
+      const OFFICE_PASSWORD = 'ohilicway2024'; // Change this to your own password
+      
+      if (passwordInput === OFFICE_PASSWORD) {
+        localStorage.setItem('ohilicway_authenticated', 'true');
+        document.getElementById('loginGate').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        // Your existing initializeApp will run automatically
+      } else {
+        document.getElementById('passwordError').style.display = 'block';
+      }
+    }
+    
+    // Check if already authenticated
+    window.addEventListener('DOMContentLoaded', function() {
+      if (localStorage.getItem('ohilicway_authenticated') === 'true') {
+        document.getElementById('loginGate').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+      } else {
+        document.getElementById('loginGate').style.display = 'flex';
+      }
+    });
+  </script>
+
+  <!-- YOUR ORIGINAL BUSINESS LOGIC - 100% UNCHANGED -->
+  <script>
+    // Configuration
+    const defaultConfig = {
+      business_name: 'Ohilicway Business System',
+      currency: 'TZS',
+      whatsapp_number: '+255760781589',
+      primary_color: '#2563eb',
+      secondary_color: '#8b5cf6',
+      background_color: '#f8fafc',
+      text_color: '#1e293b',
+      accent_color: '#10b981'
+    };
+
+    let allData = [];
+    let config = { ...defaultConfig };
+
+    // Initialize SDKs
+    async function initializeApp() {
+      // Initialize Element SDK
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig,
+          onConfigChange: async (newConfig) => {
+            config = { ...newConfig };
+            updateUIFromConfig();
+          },
+          mapToCapabilities: (cfg) => ({
+            recolorables: [
+              {
+                get: () => cfg.primary_color || defaultConfig.primary_color,
+                set: (value) => {
+                  cfg.primary_color = value;
+                  window.elementSdk.setConfig({ primary_color: value });
+                }
+              },
+              {
+                get: () => cfg.secondary_color || defaultConfig.secondary_color,
+                set: (value) => {
+                  cfg.secondary_color = value;
+                  window.elementSdk.setConfig({ secondary_color: value });
+                }
+              },
+              {
+                get: () => cfg.background_color || defaultConfig.background_color,
+                set: (value) => {
+                  cfg.background_color = value;
+                  window.elementSdk.setConfig({ background_color: value });
+                }
+              },
+              {
+                get: () => cfg.text_color || defaultConfig.text_color,
+                set: (value) => {
+                  cfg.text_color = value;
+                  window.elementSdk.setConfig({ text_color: value });
+                }
+              },
+              {
+                get: () => cfg.accent_color || defaultConfig.accent_color,
+                set: (value) => {
+                  cfg.accent_color = value;
+                  window.elementSdk.setConfig({ accent_color: value });
+                }
+              }
+            ],
+            borderables: [],
+            fontEditable: undefined,
+            fontSizeable: undefined
+          }),
+          mapToEditPanelValues: (cfg) => new Map([
+            ['business_name', cfg.business_name || defaultConfig.business_name],
+            ['currency', cfg.currency || defaultConfig.currency],
+            ['whatsapp_number', cfg.whatsapp_number || defaultConfig.whatsapp_number]
+          ])
+        });
+      }
+
+      // Initialize Data SDK
+      if (window.dataSdk) {
+        const result = await window.dataSdk.init({
+          onDataChanged(data) {
+            allData = data;
+            updateDashboard();
+          }
+        });
+
+        if (!result.isOk) {
+          showNotification('Failed to initialize data storage', 'error');
+        }
+      }
+
+      // Set current date
+      updateCurrentDate();
+      updateUIFromConfig();
+    }
+
+    function updateUIFromConfig() {
+      const businessNameEl = document.getElementById('businessName');
+      if (businessNameEl) {
+        businessNameEl.textContent = config.business_name || defaultConfig.business_name;
+      }
+
+      // Apply colors
+      document.body.style.background = `linear-gradient(to bottom right, ${config.background_color || defaultConfig.background_color}, #e2e8f0)`;
+    }
+
+    function updateCurrentDate() {
+      const dateEl = document.getElementById('currentDate');
+      const now = new Date();
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      dateEl.textContent = now.toLocaleDateString('en-US', options);
+    }
+
+    function formatCurrency(amount) {
+      const currency = config.currency || defaultConfig.currency;
+      return `${currency} ${amount.toLocaleString()}`;
+    }
+
+    function getTodayStart() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return today.getTime();
+    }
+
+    function getMonthStart() {
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      monthStart.setHours(0, 0, 0, 0);
+      return monthStart.getTime();
+    }
+
+    function getAvailableProducts() {
+      const inventory = {};
+      
+      allData.forEach(item => {
+        if (item.type === 'purchase') {
+          if (!inventory[item.product_name]) {
+            inventory[item.product_name] = { in: 0, out: 0, cost: item.price };
+          }
+          inventory[item.product_name].in += item.quantity;
+          inventory[item.product_name].cost = item.price;
+        }
+        
+        if (item.type === 'sale') {
+          if (!inventory[item.product_name]) {
+            inventory[item.product_name] = { in: 0, out: 0, cost: 0 };
+          }
+          inventory[item.product_name].out += item.quantity;
+        }
+      });
+
+      // Filter products with available stock
+      const availableProducts = [];
+      Object.entries(inventory).forEach(([name, inv]) => {
+        const available = inv.in - inv.out;
+        if (available > 0) {
+          availableProducts.push({
+            name,
+            available,
+            cost: inv.cost
+          });
+        }
+      });
+
+      return availableProducts;
+    }
+
+    function calculateStats() {
+      const todayStart = getTodayStart();
+      const monthStart = getMonthStart();
+
+      const stats = {
+        revenueToday: 0,
+        revenueMonth: 0,
+        expensesToday: 0,
+        expensesMonth: 0,
+        grossProfitToday: 0,
+        grossProfitMonth: 0,
+        capitalToday: 0,
+        capitalMonth: 0,
+        salesCount: 0,
+        purchasesCount: 0,
+        expensesCount: 0,
+        inventory: {}
+      };
+
+      // First pass: build inventory with cost prices
+      allData.forEach(item => {
+        if (item.type === 'purchase') {
+          if (!stats.inventory[item.product_name]) {
+            stats.inventory[item.product_name] = { in: 0, out: 0, cost: item.price, selling: 0 };
+          }
+          stats.inventory[item.product_name].in += item.quantity;
+          stats.inventory[item.product_name].cost = item.price;
+        }
+      });
+
+      // Second pass: calculate sales and gross profit
+      allData.forEach(item => {
+        const itemDate = new Date(item.date).getTime();
+        const isToday = itemDate >= todayStart;
+        const isThisMonth = itemDate >= monthStart;
+
+        if (item.type === 'sale') {
+          const revenue = item.quantity * item.price;
+          const costPrice = item.cost_price || 0;
+          const grossProfit = (item.price - costPrice) * item.quantity;
+          const capitalFromSale = costPrice * item.quantity;
+
+          if (isToday) {
+            stats.revenueToday += revenue;
+            stats.grossProfitToday += grossProfit;
+            stats.capitalToday += capitalFromSale;
+            stats.salesCount++;
+          }
+          if (isThisMonth) {
+            stats.revenueMonth += revenue;
+            stats.grossProfitMonth += grossProfit;
+            stats.capitalMonth += capitalFromSale;
+          }
+
+          // Track inventory out
+          if (!stats.inventory[item.product_name]) {
+            stats.inventory[item.product_name] = { in: 0, out: 0, cost: costPrice, selling: item.price };
+          }
+          stats.inventory[item.product_name].out += item.quantity;
+          stats.inventory[item.product_name].selling = item.price;
+        }
+
+        if (item.type === 'purchase') {
+          if (isToday) {
+            stats.purchasesCount++;
+          }
+        }
+
+        if (item.type === 'expense') {
+          if (isToday) {
+            stats.expensesToday += item.price;
+            stats.expensesCount++;
+          }
+          if (isThisMonth) stats.expensesMonth += item.price;
+        }
+      });
+
+      // Calculate NET PROFIT = Gross Profit - Expenses
+      stats.profitToday = stats.grossProfitToday - stats.expensesToday;
+      stats.profitMonth = stats.grossProfitMonth - stats.expensesMonth;
+
+      // Calculate stock value
+      stats.stockValue = 0;
+      stats.stockItemsCount = 0;
+      Object.values(stats.inventory).forEach(inv => {
+        const available = inv.in - inv.out;
+        if (available > 0) {
+          stats.stockValue += available * inv.cost;
+          stats.stockItemsCount++;
+        }
+      });
+
+      return stats;
+    }
+
+    function calculateStatsForDateRange(fromDate, toDate) {
+      const fromTime = new Date(fromDate).getTime();
+      const toTime = new Date(toDate).setHours(23, 59, 59, 999);
+
+      const stats = {
+        revenue: 0,
+        expenses: 0,
+        costOfGoods: 0,
+        grossProfit: 0,
+        netProfit: 0,
+        salesCount: 0,
+        purchasesCount: 0,
+        expensesCount: 0,
+        inventory: {}
+      };
+
+      // Calculate for the date range
+      allData.forEach(item => {
+        const itemDate = new Date(item.date).getTime();
+        const isInRange = itemDate >= fromTime && itemDate <= toTime;
+
+        if (!isInRange) return;
+
+        if (item.type === 'sale') {
+          const revenue = item.quantity * item.price;
+          const costPrice = item.cost_price || 0;
+          const costOfGoods = costPrice * item.quantity;
+          const grossProfit = (item.price - costPrice) * item.quantity;
+
+          stats.revenue += revenue;
+          stats.costOfGoods += costOfGoods;
+          stats.grossProfit += grossProfit;
+          stats.salesCount++;
+
+          // Track inventory
+          if (!stats.inventory[item.product_name]) {
+            stats.inventory[item.product_name] = { sold: 0, revenue: 0 };
+          }
+          stats.inventory[item.product_name].sold += item.quantity;
+          stats.inventory[item.product_name].revenue += revenue;
+        }
+
+        if (item.type === 'purchase') {
+          stats.purchasesCount++;
+        }
+
+        if (item.type === 'expense') {
+          stats.expenses += item.price;
+          stats.expensesCount++;
+        }
+      });
+
+      // Calculate NET PROFIT
+      stats.netProfit = stats.grossProfit - stats.expenses;
+
+      return stats;
+    }
+
+    function updateDashboard() {
+      const stats = calculateStats();
+
+      // Update stat cards
+      document.getElementById('revenueToday').textContent = formatCurrency(stats.revenueToday);
+      document.getElementById('revenueMonth').textContent = formatCurrency(stats.revenueMonth);
+      document.getElementById('expensesToday').textContent = formatCurrency(stats.expensesToday);
+      document.getElementById('expensesMonth').textContent = formatCurrency(stats.expensesMonth);
+      document.getElementById('profitToday').textContent = formatCurrency(stats.profitToday);
+      document.getElementById('profitMonth').textContent = formatCurrency(stats.profitMonth);
+      document.getElementById('stockValue').textContent = formatCurrency(stats.stockValue);
+      document.getElementById('stockItems').textContent = `${stats.stockItemsCount} items`;
+      document.getElementById('capitalToday').textContent = formatCurrency(stats.capitalToday);
+      document.getElementById('capitalMonth').textContent = formatCurrency(stats.capitalMonth);
+
+      // Update quick summary
+      document.getElementById('salesCount').textContent = stats.salesCount;
+      document.getElementById('purchasesCount').textContent = stats.purchasesCount;
+      document.getElementById('expensesCount').textContent = stats.expensesCount;
+
+      // Update inventory table
+      updateInventoryTable(stats.inventory);
+
+      // Update recent transactions
+      updateTransactionsList();
+    }
+
+    function updateInventoryTable(inventory) {
+      const tbody = document.getElementById('inventoryTable');
+      
+      if (Object.keys(inventory).length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-500">No inventory data yet</td></tr>';
+        return;
+      }
+
+      const rows = Object.entries(inventory).map(([product, inv]) => {
+        const available = inv.in - inv.out;
+        const rowClass = available < 10 ? 'bg-red-50' : '';
+        const warningIcon = available < 10 ? '⚠️ ' : '';
+        
+        return `
+          <tr class="border-b border-slate-100 ${rowClass}">
+            <td class="py-3 px-4 text-sm text-slate-900">${warningIcon}${product}</td>
+            <td class="py-3 px-4 text-sm text-right text-slate-700">${inv.in}</td>
+            <td class="py-3 px-4 text-sm text-right text-slate-700">${inv.out}</td>
+            <td class="py-3 px-4 text-sm text-right font-semibold ${available < 10 ? 'text-red-600' : 'text-slate-900'}">${available}</td>
+            <td class="py-3 px-4 text-sm text-right text-slate-700">${formatCurrency(inv.cost)}</td>
+            <td class="py-3 px-4 text-sm text-right text-slate-700">${inv.selling > 0 ? formatCurrency(inv.selling) : '-'}</td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.innerHTML = rows;
+    }
+
+    function updateTransactionsList() {
+      const container = document.getElementById('transactionsList');
+      
+      if (allData.length === 0) {
+        container.innerHTML = '<p class="text-center py-8 text-slate-500">No transactions yet</p>';
+        return;
+      }
+
+      // Get last 10 transactions
+      const recent = [...allData]
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 10);
+
+      const items = recent.map(item => {
+        let icon, color, description;
+        
+        if (item.type === 'sale') {
+          icon = '🛒';
+          color = 'text-blue-600';
+          const profit = (item.price - (item.cost_price || 0)) * item.quantity;
+          description = `Sale: ${item.product_name} (${item.quantity} units) - ${formatCurrency(item.quantity * item.price)} (Profit: ${formatCurrency(profit)})`;
+        } else if (item.type === 'purchase') {
+          icon = '📦';
+          color = 'text-purple-600';
+          description = `Purchase: ${item.product_name} (${item.quantity} units) - ${formatCurrency(item.quantity * item.price)}`;
+        } else {
+          icon = '💸';
+          color = 'text-red-600';
+          description = `Expense: ${item.expense_name} - ${formatCurrency(item.price)}`;
+        }
+
+        const date = new Date(item.date).toLocaleDateString();
+
+        return `
+          <div class="flex items-center justify-between py-3 px-4 bg-slate-50 rounded-lg">
+            <div class="flex items-center space-x-3">
+              <span class="text-2xl">${icon}</span>
+              <div>
+                <p class="text-sm font-medium ${color}">${description}</p>
+                <p class="text-xs text-slate-500">${date}</p>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = items;
+    }
+
+    function showLoading() {
+      document.getElementById('loadingIndicator').classList.remove('hidden');
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingIndicator').classList.add('hidden');
+    }
+
+    function showNotification(message, type = 'success') {
+      const colors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        info: 'bg-blue-500'
+      };
+
+      const notification = document.createElement('div');
+      notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 slide-in`;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.remove();
+      }, 3000);
+    }
+
+    function closeModal() {
+      document.getElementById('modalContainer').innerHTML = '';
+    }
+
+    function showSaleModal() {
+      const availableProducts = getAvailableProducts();
+      
+      if (availableProducts.length === 0) {
+        showNotification('No products in stock. Please add stock first.', 'error');
+        return;
+      }
+
+      const productOptions = availableProducts.map(p => 
+        `<option value="${p.name}" data-cost="${p.cost}" data-available="${p.available}">${p.name} (${p.available} available)</option>`
+      ).join('');
+
+      const modal = `
+        <div class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
+          <div class="bg-white rounded-lg max-w-md w-full p-6 slide-in">
+            <h3 class="text-xl font-bold text-slate-900 mb-4">🛒 Add Sale</h3>
+            <form id="saleForm" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                <input type="date" name="date" value="${new Date().toISOString().split('T')[0]}" required
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Product</label>
+                <select id="productSelect" name="product" required
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Select a product...</option>
+                  ${productOptions}
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Quantity to Sell</label>
+                <input type="number" id="quantityInput" name="quantity" min="1" required
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <p id="availableQty" class="text-xs text-slate-500 mt-1"></p>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Selling Price (per unit)</label>
+                <input type="number" name="price" min="0" step="0.01" required
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Payment Method</label>
+                <select name="payment" required
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="Cash">Cash</option>
+                  <option value="Mobile">Mobile Money</option>
+                  <option value="Bank">Bank Transfer</option>
+                </select>
+              </div>
+              <input type="hidden" id="costPriceInput" name="cost_price" value="0">
+              <div class="flex space-x-3 pt-2">
+                <button type="button" onclick="closeModal()"
+                  class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">
+                  Cancel
+                </button>
+                <button type="submit"
+                  class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 btn-primary">
+                  Add Sale
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modalContainer').innerHTML = modal;
+
+      // Product selection handler
+      const productSelect = document.getElementById('productSelect');
+      const quantityInput = document.getElementById('quantityInput');
+      const costPriceInput = document.getElementById('costPriceInput');
+      const availableQty = document.getElementById('availableQty');
+
+      productSelect.addEventListener('change', (e) => {
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        const available = selectedOption.dataset.available;
+        const cost = selectedOption.dataset.cost;
+        
+        if (available) {
+          quantityInput.max = available;
+          costPriceInput.value = cost;
+          availableQty.textContent = `Available: ${available} units`;
+        }
+      });
+
+      document.getElementById('saleForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const quantity = parseFloat(formData.get('quantity'));
+        const maxQty = parseFloat(quantityInput.max);
+
+        if (quantity > maxQty) {
+          showNotification(`Only ${maxQty} units available!`, 'error');
+          return;
+        }
+
+        const data = {
+          type: 'sale',
+          date: formData.get('date'),
+          product_name: formData.get('product'),
+          quantity: quantity,
+          price: parseFloat(formData.get('price')),
+          cost_price: parseFloat(formData.get('cost_price')),
+          payment_method: formData.get('payment'),
+          timestamp: Date.now()
+        };
+
+        showLoading();
+        const result = await window.dataSdk.create(data);
+        hideLoading();
+
+        if (result.isOk) {
+          showNotification('Sale added successfully!');
+          closeModal();
+        } else {
+          showNotification('Failed to add sale', 'error');
+        }
+      });
+    }
+
+    function showStockModal() {
+      const modal = `
+        <div class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
+          <div class="bg-white rounded-lg max-w-md w-full p-6 slide-in">
+            <h3 class="text-xl font-bold text-slate-900 mb-4">📦 Add Stock / Purchase</h3>
+            <form id="stockForm" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                <input type="date" name="date" value="${new Date().toISOString().split('T')[0]}" required
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Product Name</label>
+                <input type="text" name="product" required
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Quantity</label>
+                <input type="number" name="quantity" min="1" required
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Cost Price (per unit)</label>
+                <input type="number" name="price" min="0" step="0.01" required
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Supplier (optional)</label>
+                <input type="text" name="supplier"
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              </div>
+              <div class="flex space-x-3 pt-2">
+                <button type="button" onclick="closeModal()"
+                  class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">
+                  Cancel
+                </button>
+                <button type="submit"
+                  class="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 btn-primary">
+                  Add Stock
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modalContainer').innerHTML = modal;
+
+      document.getElementById('stockForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const data = {
+          type: 'purchase',
+          date: formData.get('date'),
+          product_name: formData.get('product'),
+          quantity: parseFloat(formData.get('quantity')),
+          price: parseFloat(formData.get('price')),
+          supplier: formData.get('supplier') || '',
+          timestamp: Date.now()
+        };
+
+        showLoading();
+        const result = await window.dataSdk.create(data);
+        hideLoading();
+
+        if (result.isOk) {
+          showNotification('Stock added successfully!');
+          closeModal();
+        } else {
+          showNotification('Failed to add stock', 'error');
+        }
+      });
+    }
+
+    function showExpenseModal() {
+      const modal = `
+        <div class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
+          <div class="bg-white rounded-lg max-w-md w-full p-6 slide-in">
+            <h3 class="text-xl font-bold text-slate-900 mb-4">💸 Add Expense</h3>
+            <form id="expenseForm" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                <input type="date" name="date" value="${new Date().toISOString().split('T')[0]}" required
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Expense Name</label>
+                <input type="text" name="expense" required
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Amount</label>
+                <input type="number" name="price" min="0" step="0.01" required
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                <select name="category" required
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+                  <option value="Rent">Rent</option>
+                  <option value="Transport">Transport</option>
+                  <option value="Salary">Salary</option>
+                  <option value="Utilities">Utilities</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="flex space-x-3 pt-2">
+                <button type="button" onclick="closeModal()"
+                  class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">
+                  Cancel
+                </button>
+                <button type="submit"
+                  class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 btn-primary">
+                  Add Expense
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modalContainer').innerHTML = modal;
+
+      document.getElementById('expenseForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const data = {
+          type: 'expense',
+          date: formData.get('date'),
+          expense_name: formData.get('expense'),
+          price: parseFloat(formData.get('price')),
+          category: formData.get('category'),
+          timestamp: Date.now()
+        };
+
+        showLoading();
+        const result = await window.dataSdk.create(data);
+        hideLoading();
+
+        if (result.isOk) {
+          showNotification('Expense added successfully!');
+          closeModal();
+        } else {
+          showNotification('Failed to add expense', 'error');
+        }
+      });
+    }
+
+    function generateReport() {
+      const stats = calculateStats();
+      const businessName = config.business_name || defaultConfig.business_name;
+      const currency = config.currency || defaultConfig.currency;
+      const whatsappNumber = config.whatsapp_number || defaultConfig.whatsapp_number;
+      const today = new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+
+      let stockSummary = '';
+      Object.entries(stats.inventory).forEach(([product, inv]) => {
+        const available = inv.in - inv.out;
+        if (available > 0) {
+          stockSummary += `- ${product}: ${available} units\n`;
+        }
+      });
+
+      if (!stockSummary) {
+        stockSummary = '- No items in stock\n';
+      }
+
+      const report = `
+✨ ${businessName.toUpperCase()} DAILY REPORT
+Date: ${today}
+
+💰 Revenue: ${currency} ${stats.revenueToday.toLocaleString()}
+📦 Cost of Goods: ${currency} ${(stats.revenueToday - stats.grossProfitToday).toLocaleString()}
+💸 Expenses: ${currency} ${stats.expensesToday.toLocaleString()}
+━━━━━━━━━━━━━━━━━━
+📈 NET PROFIT: ${currency} ${stats.profitToday.toLocaleString()}
+
+📦 Stock Summary:
+${stockSummary}
+📊 Transactions Today:
+- Sales: ${stats.salesCount}
+- Purchases: ${stats.purchasesCount}
+- Expenses: ${stats.expensesCount}
+
+Generated automatically by Ohilicway System.
+      `.trim();
+
+      const encodedReport = encodeURIComponent(report);
+      const whatsappUrl = `https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodedReport}`;
+      
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      showNotification('Report generated! Opening WhatsApp...', 'info');
+    }
+
+    function generateCustomReport() {
+      const fromDate = document.getElementById('fromDate').value;
+      const toDate = document.getElementById('toDate').value;
+
+      if (!fromDate || !toDate) {
+        showNotification('Please select both From and To dates', 'error');
+        return;
+      }
+
+      if (new Date(fromDate) > new Date(toDate)) {
+        showNotification('From Date cannot be after To Date', 'error');
+        return;
+      }
+
+      const stats = calculateStatsForDateRange(fromDate, toDate);
+      const businessName = config.business_name || defaultConfig.business_name;
+      const currency = config.currency || defaultConfig.currency;
+
+      const fromFormatted = new Date(fromDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+      const toFormatted = new Date(toDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+
+      let productSummary = '';
+      Object.entries(stats.inventory).forEach(([product, inv]) => {
+        productSummary += `- ${product}: ${inv.sold} units (${currency} ${inv.revenue.toLocaleString()})\n`;
+      });
+
+      if (!productSummary) {
+        productSummary = '- No sales in this period\n';
+      }
+
+      const report = `
+✨ ${businessName.toUpperCase()} CUSTOM REPORT
+Period: ${fromFormatted} - ${toFormatted}
+
+💰 Revenue: ${currency} ${stats.revenue.toLocaleString()}
+📦 Cost of Goods: ${currency} ${stats.costOfGoods.toLocaleString()}
+💸 Expenses: ${currency} ${stats.expenses.toLocaleString()}
+━━━━━━━━━━━━━━━━━━━━
+📈 GROSS PROFIT: ${currency} ${stats.grossProfit.toLocaleString()}
+📈 NET PROFIT: ${currency} ${stats.netProfit.toLocaleString()}
+
+📊 Transactions Summary:
+- Sales: ${stats.salesCount}
+- Purchases: ${stats.purchasesCount}
+- Expenses: ${stats.expensesCount}
+
+🛒 Products Sold:
+${productSummary}
+Generated automatically by Ohilicway System.
+      `.trim();
+
+      // Display the report
+      document.getElementById('reportContent').textContent = report;
+      document.getElementById('reportDisplay').classList.remove('hidden');
+      
+      showNotification('Report generated successfully!', 'success');
+      return report;
+    }
+
+    function sendReportToWhatsApp() {
+      const fromDate = document.getElementById('fromDate').value;
+      const toDate = document.getElementById('toDate').value;
+
+      if (!fromDate || !toDate) {
+        showNotification('Please generate a report first', 'error');
+        return;
+      }
+
+      const report = generateCustomReport();
+      const whatsappNumber = config.whatsapp_number || defaultConfig.whatsapp_number;
+      const encodedReport = encodeURIComponent(report);
+      const whatsappUrl = `https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodedReport}`;
+      
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      showNotification('Opening WhatsApp...', 'info');
+    }
+
+    // Event listeners
+    document.getElementById('addSaleBtn').addEventListener('click', showSaleModal);
+    document.getElementById('addStockBtn').addEventListener('click', showStockModal);
+    document.getElementById('addExpenseBtn').addEventListener('click', showExpenseModal);
+    document.getElementById('generateReportBtn').addEventListener('click', generateCustomReport);
+    document.getElementById('sendReportBtn').addEventListener('click', sendReportToWhatsApp);
+
+    // Initialize on load
+    initializeApp();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bebc84303fd7406',t:'MTc2ODU0NzMxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
