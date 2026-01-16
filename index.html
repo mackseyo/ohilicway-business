@@ -18,87 +18,111 @@
   <!-- 🔧 END OF CHANGES - REST IS YOUR ORIGINAL CODE -->
 
  <script>
-// ===== SIMPLE DATA SYSTEM =====
-console.log("🚀 Starting Ohilicway Data System...");
+// ===== SIMPLE FIX SCRIPT =====
+console.log("🔧 Fixing Ohilicway System...");
 
-// ⚠️ REMOVE THESE LINES:
-// let allData = [];
-// let dataUpdateCallback = null;
+// Store the update callback globally
+window._ohilicwayUpdateCallback = null;
 
-// USE EXISTING VARIABLES INSTEAD
-console.log("Using existing allData variable from main script");
-
-// Initialize the system
-function initializeDataSystem() {
-  console.log("📊 Initializing data system...");
+// Wait for page to fully load
+setTimeout(() => {
+  console.log("🔄 Creating missing SDKs...");
   
-  // Load existing data
-  allData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-  console.log(`📥 Loaded ${allData.length} existing records`);
-  
-  // Create dataSdk (EXACTLY what your app expects)
+  // Create dataSdk
   window.dataSdk = {
     async init(options) {
       console.log("✅ dataSdk.init() called");
       
+      // Load existing data
+      const savedData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+      console.log(`📥 Found ${savedData.length} existing records`);
+      
+      // Store callback for updates
       if (options && options.onDataChanged) {
-        dataUpdateCallback = options.onDataChanged;
-        // Send current data to dashboard
-        options.onDataChanged(allData);
+        window._ohilicwayUpdateCallback = options.onDataChanged;
+        // Send initial data
+        options.onDataChanged(savedData);
       }
+      
       return { isOk: true };
     },
     
     async create(data) {
-      console.log("➕ Creating:", data.type, data.product_name || data.expense_name);
+      console.log(`➕ Creating ${data.type}:`, data.product_name || data.expense_name);
       
-      // Add timestamp if missing
-      if (!data.timestamp) data.timestamp = Date.now();
-      
-      // Add to array
-      allData.push(data);
-      
-      // Save to localStorage
-      localStorage.setItem('ohilicway_data', JSON.stringify(allData));
-      
-      // Update dashboard
-      if (dataUpdateCallback) {
-        dataUpdateCallback(allData);
+      try {
+        // Load current data
+        const currentData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+        
+        // Add new item with ID
+        const newItem = {
+          ...data,
+          id: Date.now(),
+          timestamp: data.timestamp || Date.now()
+        };
+        
+        // Save to array
+        currentData.push(newItem);
+        
+        // Save to localStorage
+        localStorage.setItem('ohilicway_data', JSON.stringify(currentData));
+        console.log("💾 Saved to localStorage");
+        
+        // Update dashboard if callback exists
+        if (window._ohilicwayUpdateCallback) {
+          console.log("🔄 Updating dashboard...");
+          window._ohilicwayUpdateCallback(currentData);
+        } else {
+          console.log("⚠️ No callback found for UI update");
+        }
+        
+        // Show success notification
+        if (typeof showNotification === 'function') {
+          showNotification(`${data.type} added successfully!`, 'success');
+        } else {
+          // Create simple notification
+          const notification = document.createElement('div');
+          notification.textContent = '✅ Added successfully!';
+          notification.style.cssText = 'position:fixed;top:20px;right:20px;background:green;color:white;padding:10px;border-radius:5px;z-index:9999;';
+          document.body.appendChild(notification);
+          setTimeout(() => notification.remove(), 3000);
+        }
+        
+        return { isOk: true, id: newItem.id };
+        
+      } catch (error) {
+        console.error("❌ Create error:", error);
+        return { isOk: false, error: error.message };
       }
-      
-      // Show success
-      showNotification(`${data.type} added successfully!`, 'success');
-      
-      return { isOk: true, id: Date.now() };
     },
     
     async update(id, data) {
-      console.log("✏️ Updating record:", id);
-      // Find and update
-      const index = allData.findIndex(item => item.id === id);
+      console.log("✏️ Updating:", id);
+      const currentData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+      const index = currentData.findIndex(item => item.id === id);
       if (index !== -1) {
-        allData[index] = { ...allData[index], ...data };
-        localStorage.setItem('ohilicway_data', JSON.stringify(allData));
-        if (dataUpdateCallback) dataUpdateCallback(allData);
+        currentData[index] = { ...currentData[index], ...data };
+        localStorage.setItem('ohilicway_data', JSON.stringify(currentData));
+        if (window._ohilicwayUpdateCallback) window._ohilicwayUpdateCallback(currentData);
       }
       return { isOk: true };
     },
     
     async delete(id) {
-      console.log("🗑️ Deleting record:", id);
-      allData = allData.filter(item => item.id !== id);
-      localStorage.setItem('ohilicway_data', JSON.stringify(allData));
-      if (dataUpdateCallback) dataUpdateCallback(allData);
+      console.log("🗑️ Deleting:", id);
+      const currentData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+      const newData = currentData.filter(item => item.id !== id);
+      localStorage.setItem('ohilicway_data', JSON.stringify(newData));
+      if (window._ohilicwayUpdateCallback) window._ohilicwayUpdateCallback(newData);
       return { isOk: true };
     }
   };
   
-  // Create elementSdk (simple version)
+  // Create elementSdk
   window.elementSdk = {
     init: (config) => {
       console.log("✅ elementSdk.init() called");
-      // Store config
-      if (config.defaultConfig) {
+      if (config && config.defaultConfig) {
         localStorage.setItem('ohilicway_config', JSON.stringify(config.defaultConfig));
       }
       return { isOk: true };
@@ -115,61 +139,17 @@ function initializeDataSystem() {
     })
   };
   
-  console.log("✅ All SDKs ready!");
-  return true;
-}
-
-// Notification helper (matches your existing function)
-function showNotification(message, type = 'success') {
-  const colors = {
-    success: '#10B981',
-    error: '#EF4444',
-    info: '#3B82F6'
-  };
-
-  const notification = document.createElement('div');
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: ${colors[type]};
-    color: white;
-    padding: 12px 24px;
-    border-radius: 8px;
-    z-index: 9999;
-    font-weight: 500;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    animation: slideIn 0.3s ease-out;
-  `;
-  notification.textContent = message;
-  document.body.appendChild(notification);
-
-  setTimeout(() => {
-    notification.style.opacity = '0';
-    notification.style.transform = 'translateY(-10px)';
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
-}
-
-// Start when page loads
-document.addEventListener('DOMContentLoaded', function() {
-  console.log("📄 DOM loaded, starting system...");
+  console.log("✅ SDKs created successfully!");
   
-  // Wait a bit for other scripts
+  // Force initialization if needed
   setTimeout(() => {
-    initializeDataSystem();
-    
-    // Override the existing initializeApp if needed
-    if (window.initializeApp) {
-      const originalInit = window.initializeApp;
-      window.initializeApp = async function() {
-        console.log("🎯 Custom initializeApp running...");
-        initializeDataSystem();
-        return originalInit.apply(this, arguments);
-      };
+    if (window.initializeApp && typeof window.initializeApp === 'function') {
+      console.log("🚀 Calling initializeApp...");
+      window.initializeApp();
     }
-  }, 100);
-});
+  }, 500);
+  
+}, 1000);
 </script>
   
   <style>
@@ -1268,6 +1248,7 @@ Generated automatically by Ohilicway System.
  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bebc84303fd7406',t:'MTc2ODU0NzMxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 
 </html>
+
 
 
 
