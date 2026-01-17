@@ -48,14 +48,8 @@
   <!-- 🔧 WITH THESE 5 LINES: -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-<script src="firebase-adapter.js"></script> <!-- New SDK implementation -->
-  <!-- 🔧 END OF CHANGES - REST IS YOUR ORIGINAL CODE -->
+<!-- 🔧 END OF CHANGES - REST IS YOUR ORIGINAL CODE -->
 
-<!-- OUR ADAPTER (MUST BE AFTER Firebase) -->
-<script src="firebase-adapter.js"></script>
-
-
-  
   <style>
     body {
       box-sizing: border-box;
@@ -322,6 +316,36 @@ window.addEventListener('DOMContentLoaded', function() {
   }
 });
   </script>
+
+  <!-- 🔧 FIREBASE INITIALIZATION -->
+<script>
+  // Firebase configuration - REPLACE WITH YOUR ACTUAL FIREBASE CONFIG
+  const firebaseConfig = {
+    apiKey: "AIzaSyD9pzRfWTwLkm7eI7E29rJyqCgPpZfzL5E", // Replace with your actual API key
+    authDomain: "ohilicway-business.firebaseapp.com", // Replace with your domain
+    projectId: "ohilicway-business", // Replace with your project ID
+    storageBucket: "ohilicway-business.appspot.com", // Replace with your bucket
+    messagingSenderId: "123456789012", // Replace with your sender ID
+    appId: "1:123456789012:web:abcdef123456" // Replace with your app ID
+  };
+  
+  // Initialize Firebase
+  try {
+    if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+      console.log("✅ Firebase initialized successfully!");
+    }
+    window.firebaseReady = true;
+  } catch (error) {
+    console.error("❌ Firebase initialization error:", error);
+    window.firebaseReady = false;
+  }
+</script>
+
+<!-- Now load the adapter -->
+<script src="firebase-adapter.js"></script>
+
+<!-- YOUR ORIGINAL BUSINESS LOGIC - 100% UNCHANGED -->
 
   <!-- YOUR ORIGINAL BUSINESS LOGIC - 100% UNCHANGED -->
   <script>
@@ -1396,9 +1420,40 @@ setTimeout(() => {
   }
 }, 2000);
 </script>
+// ===== EMERGENCY SPINNER FIX =====
+document.addEventListener('DOMContentLoaded', function() {
+  // Force hide loading spinner after 2 seconds max
+  setTimeout(function() {
+    const loader = document.getElementById('loadingIndicator');
+    if (loader) {
+      loader.classList.add('hidden');
+      console.log("✅ Emergency: Hidden stuck loading spinner");
+    }
+  }, 2000);
+  
+  // Initialize the app with error handling
+  setTimeout(initializeApp, 100);
+});
+
+// Override showLoading with timeout protection
+const originalShowLoading = window.showLoading;
+window.showLoading = function() {
+  console.log("⏳ Show loading (protected)");
+  
+  if (typeof originalShowLoading === 'function') {
+    originalShowLoading();
+  }
+  
+  // Auto-hide after 4 seconds maximum
+  setTimeout(function() {
+    window.hideLoading();
+  }, 4000);
+};
+  
  </body>
 
 </html>
+
 
 
 
