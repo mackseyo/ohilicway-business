@@ -250,6 +250,12 @@
       <button onclick="emergencyClearData()" class="px-4 py-2 bg-red-800 text-white rounded-lg hover:bg-red-900">
         🚨 Emergency Clear
       </button>
+     <button onclick="backupToFirebase()" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">
+  ☁️ Backup to Firebase
+</button>
+<button onclick="restoreFromFirebase()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+  ⬇️ Restore from Firebase
+</button>
     </div>
   </div>
 </div>
@@ -391,6 +397,30 @@ window.dataSdk = {
     
     // Initialize Firebase connection
     initializeFirebaseConnection();
+
+       // Set up real-time listener for updates
+    if (isFirebaseReady && firestore) {
+      try {
+        firestore.collection('business_data')
+          .orderBy('timestamp', 'desc')
+          .onSnapshot((snapshot) => {
+            console.log("🔄 Real-time update received from Firebase");
+            const updatedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // Save to localStorage
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedData));
+            
+            // Update UI
+            if (window.ohilicwayUpdateCallback) {
+              window.ohilicwayUpdateCallback(updatedData);
+            }
+          }, (error) => {
+            console.log("⚠️ Real-time listener error:", error.message);
+          });
+      } catch (error) {
+        console.log("⚠️ Couldn't set up real-time listener");
+      }
+    }
     
     // Try to load from Firebase first
     let data = [];
@@ -614,43 +644,6 @@ window.elementSdk = {
 };
 
 console.log("✅✅✅ REAL FIREBASE ADAPTER READY!");
-
-// Auto-sync function (runs every 5 minutes)
-setInterval(async () => {
-  if (isFirebaseReady && firestore) {
-    try {
-      const localData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
-      const unsyncedItems = localData.filter(item => !item.synced_to_firebase);
-      
-      if (unsyncedItems.length > 0) {
-        console.log(`🔄 Syncing ${unsyncedItems.length} items to Firebase...`);
-        
-        for (const item of unsyncedItems) {
-          try {
-            const docRef = await firestore.collection('business_data').add({
-              ...item,
-              synced_to_firebase: true,
-              firebase_sync_time: new Date().toISOString()
-            });
-            
-            // Update localStorage with Firebase ID
-            item.firebase_id = docRef.id;
-            item.synced_to_firebase = true;
-          } catch (error) {
-            console.log(`⚠️ Couldn't sync item ${item.id}:`, error.message);
-          }
-        }
-        
-        // Update localStorage
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localData));
-        console.log("✅ Auto-sync completed");
-      }
-    } catch (error) {
-      console.log("⚠️ Auto-sync error:", error.message);
-    }
-  }
-}, 300000); // 5 minutes
-
 </script>
 
   
@@ -1575,6 +1568,8 @@ Generated automatically by Ohilicway System.
 
     // Initialize on load
     initializeApp();
+
+   
    // ===== ADMIN FUNCTIONS =====
 function clearAllData() {
   if (confirm('⚠️ DELETE ALL business data? Employees will lose all sales, purchases, and expenses!')) {
@@ -1591,6 +1586,93 @@ function clearAllData() {
     }, 2000);
   }
 }
+
+function backupToFirebase() {
+  if (confirm('Backup all local data to Firebase? This will overwrite existing Firebase data.')) {
+    showLoading();
+    
+    const localData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+    const config = JSON.parse(localStorage.getItem(CONFIG_STORAGE_KEY) || '{}');
+    
+    if (isFirebaseReady && firestore) {
+      try {
+        // Clear existing Firebase data
+        firestore.collection('business_data').get().then(snapshot => {
+          const batch = firestore.batch();
+          snapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+          });
+          
+          return batch.commit();
+        }).then(() => {
+          // Add all local data
+          const batch = firestore.batch();
+          localData.forEach(item => {
+            const docRef = firestore.collection('business_data').doc();
+            batch.set(docRef, {
+              ...item,
+              synced_to_firebase: true,
+              backup_time: new Date().toISOString()
+            });
+          });
+          
+          // Backup config
+          firestore.collection('config').doc('business_config_backup').set({
+            config: config,
+            backup_time: new Date().toISOString(),
+            record_count: localData.length
+          }, { merge: true });
+          
+          return batch.commit();
+        }).then(() => {
+          hideLoading();
+          showNotification(`✅ Backup completed! ${localData.length} records saved to Firebase.`, 'success');
+        }).catch(error => {
+          hideLoading();
+          showNotification('Backup failed: ' + error.message, 'error');
+        });
+      } catch (error) {
+        hideLoading();
+        showNotification('Backup failed', 'error');
+      }
+    } else {
+      hideLoading();
+      showNotification('Firebase not available for backup', 'error');
+    }
+  }
+}
+
+function restoreFromFirebase() {
+  if (confirm('Restore from Firebase? This will overwrite local data.')) {
+    showLoading();
+    
+    if (isFirebaseReady && firestore) {
+      firestore.collection('business_data').orderBy('timestamp', 'desc').get()
+        .then(snapshot => {
+          const firebaseData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          
+          // Save to localStorage
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(firebaseData));
+          
+          // Update UI
+          if (window.ohilicwayUpdateCallback) {
+            window.ohilicwayUpdateCallback(firebaseData);
+          }
+          
+          hideLoading();
+          showNotification(`✅ Restored ${firebaseData.length} records from Firebase.`, 'success');
+        })
+        .catch(error => {
+          hideLoading();
+          showNotification('Restore failed: ' + error.message, 'error');
+        });
+    } else {
+      hideLoading();
+      showNotification('Firebase not available for restore', 'error');
+    }
+  }
+}
+   
 
 function exportData() {
   const data = {
@@ -1707,6 +1789,7 @@ function emergencyClearData() {
 </script>
  </body>
 </html>
+
 
 
 
