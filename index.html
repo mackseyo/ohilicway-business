@@ -652,33 +652,35 @@ if (typeof window.dataSdk === 'undefined') {
       return availableProducts;
     }
 
-    function calculateStats() {
-  console.log("📊 DEBUG: Calculating stats for", allData.length, "items");
-  
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0]; // "2024-01-16"
-  
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  monthStart.setHours(0, 0, 0, 0);
-  
-  console.log("📊 DEBUG: Today's date string:", todayStr);
-  console.log("📊 DEBUG: Month start:", monthStart.toISOString().split('T')[0]);
+       function calculateStats() {
+      console.log("📊 DEBUG: Calculating stats for", allData.length, "items");
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStart = today.getTime();
+      const todayEnd = todayStart + 86400000; // End of today
+      
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      monthStart.setHours(0, 0, 0, 0);
+      const monthStartTime = monthStart.getTime();
+      
+      console.log("📊 DEBUG: Today start:", new Date(todayStart).toISOString());
+      console.log("📊 DEBUG: Month start:", new Date(monthStartTime).toISOString());
 
-  const stats = {
-    revenueToday: 0,
-    revenueMonth: 0,
-    expensesToday: 0,
-    expensesMonth: 0,
-    grossProfitToday: 0,
-    grossProfitMonth: 0,
-    capitalToday: 0,
-    capitalMonth: 0,
-    salesCount: 0,
-    purchasesCount: 0,
-    expensesCount: 0,
-    inventory: {}
-  };
+      const stats = {
+        revenueToday: 0,
+        revenueMonth: 0,
+        expensesToday: 0,
+        expensesMonth: 0,
+        grossProfitToday: 0,
+        grossProfitMonth: 0,
+        capitalToday: 0,
+        capitalMonth: 0,
+        salesCount: 0,
+        purchasesCount: 0,
+        expensesCount: 0,
+        inventory: {}
+      };
 
       // First pass: build inventory with cost prices
       allData.forEach(item => {
@@ -693,14 +695,29 @@ if (typeof window.dataSdk === 'undefined') {
 
       // Second pass: calculate sales and gross profit
       allData.forEach(item => {
-  const itemDateStr = item.date; // Should be "2024-01-16"
-  const itemDate = new Date(itemDateStr);
-  const itemTimestamp = itemDate.getTime();
-  
-  const isToday = itemDateStr === todayStr;
-  const isThisMonth = itemTimestamp >= monthStart.getTime();
-  
-  console.log(`📊 DEBUG: Item ${item.type} date: ${itemDateStr}, Today: ${isToday}, ThisMonth: ${isThisMonth}`);
+        // Parse the date properly
+        let itemDate;
+        if (item.date) {
+          // Handle both string and timestamp formats
+          if (typeof item.date === 'string') {
+            itemDate = new Date(item.date);
+          } else if (typeof item.date === 'number') {
+            itemDate = new Date(item.date);
+          } else {
+            itemDate = new Date(item.timestamp || Date.now());
+          }
+        } else {
+          itemDate = new Date(item.timestamp || Date.now());
+        }
+        
+        // Set to start of day for comparison
+        itemDate.setHours(0, 0, 0, 0);
+        const itemTime = itemDate.getTime();
+        
+        const isToday = itemTime >= todayStart && itemTime < todayEnd;
+        const isThisMonth = itemTime >= monthStartTime;
+        
+        console.log(`📊 DEBUG: Item ${item.type} date: ${itemDate.toISOString()}, Today: ${isToday}, ThisMonth: ${isThisMonth}`);
 
         if (item.type === 'sale') {
           const revenue = item.quantity * item.price;
@@ -761,8 +778,8 @@ if (typeof window.dataSdk === 'undefined') {
       return stats;
     }
 
-    function calculateStatsForDateRange(fromDate, toDate) {
-      const fromTime = new Date(fromDate).getTime();
+        function calculateStatsForDateRange(fromDate, toDate) {
+      const fromTime = new Date(fromDate).setHours(0, 0, 0, 0);
       const toTime = new Date(toDate).setHours(23, 59, 59, 999);
 
       const stats = {
@@ -779,8 +796,22 @@ if (typeof window.dataSdk === 'undefined') {
 
       // Calculate for the date range
       allData.forEach(item => {
-        const itemDate = new Date(item.date).getTime();
-        const isInRange = itemDate >= fromTime && itemDate <= toTime;
+        // Parse the date properly
+        let itemDate;
+        if (item.date) {
+          if (typeof item.date === 'string') {
+            itemDate = new Date(item.date);
+          } else if (typeof item.date === 'number') {
+            itemDate = new Date(item.date);
+          } else {
+            itemDate = new Date(item.timestamp || Date.now());
+          }
+        } else {
+          itemDate = new Date(item.timestamp || Date.now());
+        }
+        
+        const itemTime = itemDate.getTime();
+        const isInRange = itemTime >= fromTime && itemTime <= toTime;
 
         if (!isInRange) return;
 
@@ -1505,6 +1536,7 @@ function emergencyClearData() {
 </script>
  </body>
 </html>
+
 
 
 
