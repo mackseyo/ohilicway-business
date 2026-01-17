@@ -297,7 +297,7 @@
 }
     
     // Check if already authenticated
-    // 🔐 STRICT PASSWORD CHECK
+   // 🔐 STRICT PASSWORD CHECK
 window.addEventListener('DOMContentLoaded', function() {
   const isAuthenticated = localStorage.getItem('ohilicway_authenticated');
   const password = localStorage.getItem('ohilicway_password');
@@ -344,6 +344,138 @@ window.addEventListener('DOMContentLoaded', function() {
 
 <!-- Now load the adapter -->
 <script src="firebase-adapter.js"></script>
+
+  <!-- EMERGENCY FALLBACK ADAPTER -->
+<script>
+console.log("🚀 LOADING EMERGENCY ADAPTER...");
+
+// If firebase-adapter.js fails to load, create it inline
+if (typeof window.dataSdk === 'undefined') {
+  console.log("⚠️ Creating emergency fallback adapter...");
+  
+  // Storage key
+  const STORAGE_KEY = 'ohilicway_data';
+  
+  // Create dataSdk
+  window.dataSdk = {
+    async init(options) {
+      console.log("📊 Emergency dataSdk.init() called");
+      
+      // Load existing data
+      const savedData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      console.log(`📥 Loaded ${savedData.length} records`);
+      
+      if (options && options.onDataChanged) {
+        // Store callback for updates
+        window.ohilicwayUpdateCallback = options.onDataChanged;
+        // Send data immediately
+        options.onDataChanged(savedData);
+      }
+      
+      // HIDE THE SPINNER IMMEDIATELY
+      setTimeout(() => {
+        const loader = document.getElementById('loadingIndicator');
+        if (loader) {
+          loader.classList.add('hidden');
+          console.log("✅ Emergency: Hidden loading spinner");
+        }
+      }, 100);
+      
+      return { isOk: true };
+    },
+    
+    async create(data) {
+      console.log(`➕ CREATE: ${data.type} - ${data.product_name || data.expense_name}`);
+      
+      try {
+        // Get current data
+        const currentData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        
+        // Add with ID
+        const newItem = {
+          ...data,
+          id: Date.now(),
+          created_at: new Date().toISOString()
+        };
+        
+        // Save
+        currentData.push(newItem);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
+        console.log("💾 Saved to localStorage");
+        
+        // Update UI
+        if (window.ohilicwayUpdateCallback) {
+          window.ohilicwayUpdateCallback(currentData);
+        }
+        
+        // HIDE LOADING SPINNER
+        setTimeout(() => {
+          const loader = document.getElementById('loadingIndicator');
+          if (loader) {
+            loader.classList.add('hidden');
+          }
+        }, 300);
+        
+        // Show success
+        if (typeof showNotification === 'function') {
+          showNotification(`✅ ${data.type} saved successfully!`, 'success');
+        }
+        
+        return { isOk: true, id: newItem.id };
+        
+      } catch (error) {
+        console.error("❌ Save error:", error);
+        
+        // STILL hide loading on error
+        setTimeout(() => {
+          const loader = document.getElementById('loadingIndicator');
+          if (loader) {
+            loader.classList.add('hidden');
+          }
+        }, 300);
+        
+        return { isOk: false, error: error.message };
+      }
+    },
+    
+    async update(id, data) {
+      console.log("✏️ UPDATE:", id);
+      const currentData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      const index = currentData.findIndex(item => item.id === id);
+      if (index !== -1) {
+        currentData[index] = { ...currentData[index], ...data };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
+        if (window.ohilicwayUpdateCallback) window.ohilicwayUpdateCallback(currentData);
+      }
+      return { isOk: true };
+    },
+    
+    async delete(id) {
+      console.log("🗑️ DELETE:", id);
+      const currentData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      const newData = currentData.filter(item => item.id !== id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      if (window.ohilicwayUpdateCallback) window.ohilicwayUpdateCallback(newData);
+      return { isOk: true };
+    }
+  };
+  
+  // Create elementSdk
+  window.elementSdk = {
+    init: (config) => {
+      console.log("🎨 Emergency elementSdk.init() called");
+      if (config?.defaultConfig) {
+        localStorage.setItem('ohilicway_config', JSON.stringify(config.defaultConfig));
+      }
+      return { isOk: true };
+    },
+    setConfig: () => ({ isOk: true }),
+    getConfig: () => ({ isOk: true, config: {} })
+  };
+  
+  console.log("✅✅✅ EMERGENCY ADAPTER READY!");
+}
+</script>
 
 <!-- YOUR ORIGINAL BUSINESS LOGIC - 100% UNCHANGED -->
 
@@ -1449,19 +1581,41 @@ window.showLoading = function() {
     window.hideLoading();
   }, 4000);
 };
+  <!-- FORCE HIDE SPINNER ON LOAD -->
+<script>
+// This runs immediately when page loads
+(function() {
+  console.log("🎯 FORCE HIDING SPINNER...");
   
+  // Method 1: Immediate hide
+  const loader = document.getElementById('loadingIndicator');
+  if (loader) {
+    loader.classList.add('hidden');
+    console.log("✅ Spinner hidden immediately");
+  }
+  
+  // Method 2: Hide after 500ms (safety)
+  setTimeout(() => {
+    const loader2 = document.getElementById('loadingIndicator');
+    if (loader2 && !loader2.classList.contains('hidden')) {
+      loader2.classList.add('hidden');
+      console.log("✅ Spinner hidden after timeout");
+    }
+  }, 500);
+  
+  // Method 3: Hide after 2 seconds (emergency)
+  setTimeout(() => {
+    const loader3 = document.getElementById('loadingIndicator');
+    if (loader3 && !loader3.classList.contains('hidden')) {
+      loader3.classList.add('hidden');
+      console.log("🛑 EMERGENCY: Forced spinner hide");
+    }
+  }, 2000);
+})();
+</script>
  </body>
 
 </html>
-
-
-
-
-
-
-
-
-
 
 
 
