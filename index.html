@@ -37,6 +37,16 @@
   .text-lg { font-size: 1.125rem !important; }
   .text-sm { font-size: 0.875rem !important; }
   .text-xs { font-size: 0.75rem !important; }
+ 
+    /* FORCE HIDE LOADING SPINNER - 100% GUARANTEED */
+  #loadingIndicator {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    z-index: -9999 !important;
+  }
+</style>
 </style>
   
 <!-- Production warning is fine, ignore it -->
@@ -1453,39 +1463,49 @@ function emergencyClearData() {
  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bebc84303fd7406',t:'MTc2ODU0NzMxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
   
 
-  <!-- SIMPLE SPINNER FIX -->
+ <!-- ULTIMATE SPINNER DESTROYER -->
 <script>
-  // Wait for page to fully load
+  console.log("💣 ULTIMATE SPINNER DESTROYER ACTIVATED");
+  
+  // 1. HIDE IMMEDIATELY WITH CSS
+  (function() {
+    const loader = document.getElementById('loadingIndicator');
+    if (loader) {
+      // Add the 'hidden' class
+      loader.classList.add('hidden');
+      
+      // Force hide with inline styles (overrides everything)
+      loader.style.display = 'none';
+      loader.style.visibility = 'hidden';
+      loader.style.opacity = '0';
+      
+      console.log("✅ Spinner hidden with CSS");
+    }
+  })();
+  
+  // 2. HIDE ON PAGE LOAD
   window.addEventListener('load', function() {
-    // Hide spinner after 1 second
     setTimeout(function() {
       const loader = document.getElementById('loadingIndicator');
       if (loader) {
-        loader.classList.add('hidden');
-        console.log("✅ Simple fix: Spinner hidden");
+        loader.style.display = 'none';
+        console.log("✅ Spinner hidden on page load");
       }
-    }, 1000);
-    
-    // Force hide after 3 seconds (safety)
-    setTimeout(function() {
-      const loader = document.getElementById('loadingIndicator');
-      if (loader && !loader.classList.contains('hidden')) {
-        loader.classList.add('hidden');
-        console.log("🛑 Safety: Force-hid spinner");
-      }
-    }, 3000);
+    }, 100);
   });
   
-  // Also hide immediately if DOM is ready
-  if (document.readyState === 'interactive' || document.readyState === 'complete') {
+  // 3. EMERGENCY: REMOVE FROM DOM AFTER 2 SECONDS
+  setTimeout(function() {
     const loader = document.getElementById('loadingIndicator');
-    if (loader) {
-      loader.classList.add('hidden');
+    if (loader && loader.parentNode) {
+      loader.parentNode.removeChild(loader);
+      console.log("💀 Spinner removed from DOM");
     }
-  }
+  }, 2000);
 </script>
  </body>
 </html>
+
 
 
 
