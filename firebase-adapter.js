@@ -1,106 +1,102 @@
-// ===== SIMPLE WORKING ADAPTER =====
-console.log("🚀 Loading SIMPLE adapter...");
+// ===== OHILICWAY BUSINESS ADAPTER =====
+console.log("🚀 BUSINESS SYSTEM ADAPTER LOADED");
 
-// Create the REQUIRED SDKs immediately
+// 1. Create dataSdk IMMEDIATELY (no waiting)
 window.dataSdk = {
   async init(options) {
-    console.log("📊 dataSdk.init() - SIMPLE VERSION");
+    console.log("📊 dataSdk.init() called");
     
-    // Load from localStorage
-    const data = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-    console.log(`📥 Loaded ${data.length} records from localStorage`);
+    // Load existing data
+    const savedData = JSON.parse(localStorage.getItem('ohilicway_business_data') || '[]');
+    console.log(`📊 Loaded ${savedData.length} business records`);
     
     if (options && options.onDataChanged) {
+      // Store callback
+      window.businessDataCallback = options.onDataChanged;
       // Send data immediately
-      options.onDataChanged(data);
-      
-      // Store callback for updates
-      window._dataUpdateCallback = options.onDataChanged;
+      options.onDataChanged(savedData);
     }
     
     return { isOk: true };
   },
   
   async create(data) {
-    console.log(`➕ CREATE: ${data.type} - ${data.product_name || data.expense_name}`);
+    console.log(`💰 Creating: ${data.type} - ${data.product_name || data.expense_name}`);
     
     try {
-      // Load current data
-      const items = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+      // Get current data
+      const currentData = JSON.parse(localStorage.getItem('ohilicway_business_data') || '[]');
       
-      // Add new item
+      // Add with ID
       const newItem = {
         ...data,
-        id: Date.now(),
-        timestamp: data.timestamp || Date.now()
+        id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        created_at: new Date().toISOString()
       };
-      items.push(newItem);
       
-      // Save to localStorage
-      localStorage.setItem('ohilicway_data', JSON.stringify(items));
-      console.log("💾 Saved to localStorage");
+      // Save
+      currentData.push(newItem);
+      localStorage.setItem('ohilicway_business_data', JSON.stringify(currentData));
       
-      // Update UI if callback exists
-      if (window._dataUpdateCallback) {
-        window._dataUpdateCallback(items);
+      // Update UI
+      if (window.businessDataCallback) {
+        window.businessDataCallback(currentData);
+      }
+      
+      // Hide loading spinner (CRITICAL FIX!)
+      if (typeof hideLoading === 'function') {
+        hideLoading();
       }
       
       // Show success
       if (typeof showNotification === 'function') {
-        showNotification(`${data.type} added successfully!`, 'success');
+        showNotification(`✅ ${data.type} saved successfully!`, 'success');
+      } else {
+        console.log("✅ Saved successfully!");
       }
       
       return { isOk: true, id: newItem.id };
       
     } catch (error) {
-      console.error("❌ Create error:", error);
+      console.error("❌ Save error:", error);
+      
+      // IMPORTANT: Hide loading even on error
+      if (typeof hideLoading === 'function') hideLoading();
+      
       return { isOk: false, error: error.message };
     }
   },
   
   async update(id, data) {
-    console.log("✏️ UPDATE:", id);
-    const items = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-    const index = items.findIndex(item => item.id === id);
+    console.log("✏️ Updating:", id);
+    const currentData = JSON.parse(localStorage.getItem('ohilicway_business_data') || '[]');
+    const index = currentData.findIndex(item => item.id === id);
     if (index !== -1) {
-      items[index] = { ...items[index], ...data };
-      localStorage.setItem('ohilicway_data', JSON.stringify(items));
-      if (window._dataUpdateCallback) window._dataUpdateCallback(items);
+      currentData[index] = { ...currentData[index], ...data };
+      localStorage.setItem('ohilicway_business_data', JSON.stringify(currentData));
+      if (window.businessDataCallback) window.businessDataCallback(currentData);
     }
     return { isOk: true };
   },
   
   async delete(id) {
-    console.log("🗑️ DELETE:", id);
-    const items = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-    const newItems = items.filter(item => item.id !== id);
-    localStorage.setItem('ohilicway_data', JSON.stringify(newItems));
-    if (window._dataUpdateCallback) window._dataUpdateCallback(newItems);
+    console.log("🗑️ Deleting:", id);
+    const currentData = JSON.parse(localStorage.getItem('ohilicway_business_data') || '[]');
+    const newData = currentData.filter(item => item.id !== id);
+    localStorage.setItem('ohilicway_business_data', JSON.stringify(newData));
+    if (window.businessDataCallback) window.businessDataCallback(newData);
     return { isOk: true };
   }
 };
 
-// Element SDK
+// 2. Create elementSdk
 window.elementSdk = {
   init: (config) => {
-    console.log("🎨 elementSdk.init() - SIMPLE VERSION");
-    if (config?.defaultConfig) {
-      localStorage.setItem('ohilicway_config', JSON.stringify(config.defaultConfig));
-    }
+    console.log("🎨 elementSdk.init() called");
     return { isOk: true };
   },
-  
-  setConfig: (newConfig) => {
-    const current = JSON.parse(localStorage.getItem('ohilicway_config') || '{}');
-    const updated = { ...current, ...newConfig };
-    localStorage.setItem('ohilicway_config', JSON.stringify(updated));
-    return { isOk: true };
-  },
-  
-  getConfig: () => ({
-    isOk: true,
-    config: JSON.parse(localStorage.getItem('ohilicway_config') || '{}')
-  })
+  setConfig: () => ({ isOk: true }),
+  getConfig: () => ({ isOk: true, config: {} })
 };
 
-console.log("✅ SIMPLE adapter READY!");
+console.log("✅ BUSINESS ADAPTER READY FOR USE");
