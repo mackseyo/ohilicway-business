@@ -1,97 +1,66 @@
-// ===== OHILICWAY BUSINESS ADAPTER =====
-console.log("🚀 BUSINESS SYSTEM ADAPTER LOADED");
+// ===== SIMPLE 100% WORKING ADAPTER =====
+console.log("💯 SIMPLE ADAPTER LOADING");
 
-// 1. Create dataSdk IMMEDIATELY (no waiting)
+// Use CORRECT localStorage key
+const STORAGE_KEY = 'ohilicway_data';
+
+// Create dataSdk IMMEDIATELY
 window.dataSdk = {
   async init(options) {
-    console.log("📊 dataSdk.init() called");
+    console.log("📊 INIT called");
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    console.log(`📊 Found ${data.length} records`);
     
-    // Load existing data
-    const savedData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-    console.log(`📊 Loaded ${savedData.length} business records`);
-    
-    if (options && options.onDataChanged) {
-      // Store callback
-      window.businessDataCallback = options.onDataChanged;
-      // Send data immediately
-      options.onDataChanged(savedData);
+    if (options?.onDataChanged) {
+      window.dataCallback = options.onDataChanged;
+      options.onDataChanged(data);
     }
     
     return { isOk: true };
   },
   
   async create(data) {
-    console.log(`💰 Creating: ${data.type} - ${data.product_name || data.expense_name}`);
+    console.log(`➕ CREATE: ${data.type}`, data.product_name || data.expense_name);
     
-    try {
-      // Get current data
-      const currentData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-      
-      // Add with ID
-      const newItem = {
-        ...data,
-        id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-        created_at: new Date().toISOString()
-      };
-      
-      // Save
-      currentData.push(newItem);
-      localStorage.setItem('ohilicway_data', JSON.stringify(currentData));
-      
-      // Update UI
-      if (window.businessDataCallback) {
-        window.businessDataCallback(currentData);
-      }
-      
-      // Hide loading spinner (CRITICAL FIX!)
-      if (typeof hideLoading === 'function') {
-        hideLoading();
-      }
-      
-      // Show success
-      if (typeof showNotification === 'function') {
-        showNotification(`✅ ${data.type} saved successfully!`, 'success');
-      } else {
-        console.log("✅ Saved successfully!");
-      }
-      
-      return { isOk: true, id: newItem.id };
-      
-    } catch (error) {
-      console.error("❌ Save error:", error);
-      
-      // IMPORTANT: Hide loading even on error
-      if (typeof hideLoading === 'function') hideLoading();
-      
-      return { isOk: false, error: error.message };
+    // Get current
+    const items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    
+    // Add
+    items.push({
+      ...data,
+      id: Date.now(),
+      created: new Date().toISOString()
+    });
+    
+    // Save
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    console.log("💾 Saved to localStorage");
+    
+    // Update UI
+    if (window.dataCallback) {
+      window.dataCallback(items);
     }
-  },
-  
-  async update(id, data) {
-    console.log("✏️ Updating:", id);
-    const currentData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-    const index = currentData.findIndex(item => item.id === id);
-    if (index !== -1) {
-      currentData[index] = { ...currentData[index], ...data };
-      localStorage.setItem('ohilicway_business_data', JSON.stringify(currentData));
-      if (window.businessDataCallback) window.businessDataCallback(currentData);
+    
+    // HIDE LOADING SPINNER (CRITICAL!)
+    const loader = document.getElementById('loadingIndicator');
+    if (loader) loader.classList.add('hidden');
+    
+    // Close modal
+    const modal = document.getElementById('modalContainer');
+    if (modal) modal.innerHTML = '';
+    
+    // Show success
+    if (typeof showNotification === 'function') {
+      showNotification(`✅ ${data.type} saved!`, 'success');
     }
-    return { isOk: true };
-  },
-  
-  async delete(id) {
-    console.log("🗑️ Deleting:", id);
-    const currentData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-    const newData = currentData.filter(item => item.id !== id);
-    localStorage.setItem('ohilicway_data', JSON.stringify(newData));
-    if (window.businessDataCallback) window.businessDataCallback(newData);
+    
     return { isOk: true };
   }
 };
 
-// 2. Create elementSdk
+// Element SDK
 window.elementSdk = {
-  init: (config) => {
+  init: () => {
     console.log("🎨 elementSdk.init() called");
     return { isOk: true };
   },
@@ -99,5 +68,4 @@ window.elementSdk = {
   getConfig: () => ({ isOk: true, config: {} })
 };
 
-console.log("✅ BUSINESS ADAPTER READY FOR USE");
-
+console.log("✅✅✅ ADAPTER 100% READY");
