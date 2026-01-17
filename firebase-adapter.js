@@ -1,196 +1,106 @@
-// ===== OHILICWAY FIREBASE ADAPTER =====
-console.log("🚀 Loading Ohilicway Firebase adapter...");
+// ===== SIMPLE WORKING ADAPTER =====
+console.log("🚀 Loading SIMPLE adapter...");
 
-// 1. YOUR FIREBASE CONFIG
-const firebaseConfig = {
-  apiKey: "AIzaSyBeMa8R95fGULSNaF-VvXCw7UD5JnKwVUU",
-  authDomain: "ohilicway-business.firebaseapp.com",
-  projectId: "ohilicway-business",
-  storageBucket: "ohilicway-business.firebasestorage.app",
-  messagingSenderId: "744328322546",
-  appId: "1:744328322546:web:bfdc4db10149414fdf9f6b"
-};
-
-<script>
-// QUICK TEST: Is everything loading?
-console.log("=== SYSTEM CHECK ===");
-console.log("Firebase loaded:", typeof firebase !== 'undefined');
-console.log("dataSdk exists:", typeof window.dataSdk !== 'undefined');
-console.log("elementSdk exists:", typeof window.elementSdk !== 'undefined');
-
-// If dataSdk doesn't exist, create a simple one
-setTimeout(() => {
-  if (!window.dataSdk) {
-    console.log("⚠️ Creating emergency dataSdk...");
-    window.dataSdk = {
-      async init(options) {
-        console.log("📊 Emergency dataSdk.init()");
-        const data = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-        if (options?.onDataChanged) options.onDataChanged(data);
-        return { isOk: true };
-      },
-      async create(data) {
-        console.log("➕ Emergency save:", data.type);
-        const items = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-        items.push({ ...data, id: Date.now() });
-        localStorage.setItem('ohilicway_data', JSON.stringify(items));
-        
-        if (typeof showNotification === 'function') {
-          showNotification(`${data.type} saved (emergency mode)`, 'success');
-        }
-        
-        return { isOk: true };
-      }
-    };
-    window.elementSdk = { init: () => ({ isOk: true }) };
-    console.log("✅ Emergency SDKs created");
-  }
-}, 1000);
-</script>
-
-// 2. INITIALIZE FIREBASE
-let db = null;
-try {
-  if (typeof firebase === 'undefined') {
-    throw new Error("Firebase scripts not loaded!");
-  }
-  
-  if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-    console.log("✅ Firebase initialized");
-  }
-  
-  db = firebase.firestore();
-  console.log("✅ Firestore database ready");
-  
-} catch (error) {
-  console.error("❌ Firebase setup error:", error);
-  alert("FIREBASE ERROR: Check browser console");
-}
-
-// 3. CREATE THE dataSdk YOUR APP NEEDS
+// Create the REQUIRED SDKs immediately
 window.dataSdk = {
   async init(options) {
-    console.log("📊 dataSdk.init() called - Firebase version");
+    console.log("📊 dataSdk.init() - SIMPLE VERSION");
     
-    if (!db) {
-      console.error("❌ No database connection");
-      return { isOk: false, error: "Database not connected" };
+    // Load from localStorage
+    const data = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+    console.log(`📥 Loaded ${data.length} records from localStorage`);
+    
+    if (options && options.onDataChanged) {
+      // Send data immediately
+      options.onDataChanged(data);
+      
+      // Store callback for updates
+      window._dataUpdateCallback = options.onDataChanged;
     }
     
-    try {
-      if (options && options.onDataChanged) {
-        // Listen to ALL business data in real-time
-        db.collection("business_data")
-          .orderBy("timestamp", "desc")
-          .onSnapshot(snapshot => {
-            const data = snapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-            console.log(`📥 Firebase update: ${data.length} records`);
-            options.onDataChanged(data);
-          }, error => {
-            console.error("❌ Firestore listener error:", error);
-          });
-      }
-      
-      return { isOk: true };
-      
-    } catch (error) {
-      console.error("❌ dataSdk.init() error:", error);
-      return { isOk: false, error: error.message };
-    }
+    return { isOk: true };
   },
   
   async create(data) {
-    console.log(`➕ FIREBASE CREATE: ${data.type}`, data.product_name || data.expense_name);
-    
-    if (!db) {
-      console.error("❌ Cannot save: No database");
-      showNotification("Database error!", "error");
-      return { isOk: false, error: "No database" };
-    }
+    console.log(`➕ CREATE: ${data.type} - ${data.product_name || data.expense_name}`);
     
     try {
-      // Ensure timestamp exists
-      if (!data.timestamp) data.timestamp = Date.now();
+      // Load current data
+      const items = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
       
-      // Save to Firebase Firestore
-      const docRef = await db.collection("business_data").add({
+      // Add new item
+      const newItem = {
         ...data,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+        id: Date.now(),
+        timestamp: data.timestamp || Date.now()
+      };
+      items.push(newItem);
       
-      console.log("✅✅✅ SAVED TO FIREBASE! Document ID:", docRef.id);
+      // Save to localStorage
+      localStorage.setItem('ohilicway_data', JSON.stringify(items));
+      console.log("💾 Saved to localStorage");
+      
+      // Update UI if callback exists
+      if (window._dataUpdateCallback) {
+        window._dataUpdateCallback(items);
+      }
       
       // Show success
       if (typeof showNotification === 'function') {
-        showNotification(`✅ ${data.type} saved to cloud!`, 'success');
-      } else {
-        alert(`✅ ${data.type} saved to cloud database!`);
+        showNotification(`${data.type} added successfully!`, 'success');
       }
       
-      return { isOk: true, id: docRef.id };
+      return { isOk: true, id: newItem.id };
       
     } catch (error) {
-      console.error("❌❌❌ FIREBASE SAVE ERROR:", error);
-      
-      // EMERGENCY FALLBACK to localStorage
-      const emergencyData = JSON.parse(localStorage.getItem('ohilicway_emergency') || '[]');
-      emergencyData.push({ ...data, id: Date.now(), firebase_failed: true });
-      localStorage.setItem('ohilicway_emergency', JSON.stringify(emergencyData));
-      
-      alert(`⚠️ Saved locally (Firebase error: ${error.message})`);
-      
+      console.error("❌ Create error:", error);
       return { isOk: false, error: error.message };
     }
   },
   
   async update(id, data) {
-    console.log("✏️ Firebase UPDATE:", id);
-    if (!db) return { isOk: false };
-    
-    try {
-      await db.collection("business_data").doc(id).update({
-        ...data,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      return { isOk: true };
-    } catch (error) {
-      console.error("Update error:", error);
-      return { isOk: false, error: error.message };
+    console.log("✏️ UPDATE:", id);
+    const items = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+    const index = items.findIndex(item => item.id === id);
+    if (index !== -1) {
+      items[index] = { ...items[index], ...data };
+      localStorage.setItem('ohilicway_data', JSON.stringify(items));
+      if (window._dataUpdateCallback) window._dataUpdateCallback(items);
     }
+    return { isOk: true };
   },
   
   async delete(id) {
-    console.log("🗑️ Firebase DELETE:", id);
-    if (!db) return { isOk: false };
-    
-    try {
-      await db.collection("business_data").doc(id).delete();
-      return { isOk: true };
-    } catch (error) {
-      console.error("Delete error:", error);
-      return { isOk: false, error: error.message };
-    }
+    console.log("🗑️ DELETE:", id);
+    const items = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+    const newItems = items.filter(item => item.id !== id);
+    localStorage.setItem('ohilicway_data', JSON.stringify(newItems));
+    if (window._dataUpdateCallback) window._dataUpdateCallback(newItems);
+    return { isOk: true };
   }
 };
 
-// 4. CREATE elementSdk (simplified)
+// Element SDK
 window.elementSdk = {
   init: (config) => {
-    console.log("🎨 elementSdk.init() called");
+    console.log("🎨 elementSdk.init() - SIMPLE VERSION");
     if (config?.defaultConfig) {
       localStorage.setItem('ohilicway_config', JSON.stringify(config.defaultConfig));
     }
     return { isOk: true };
   },
-  setConfig: () => ({ isOk: true }),
-  getConfig: () => ({ isOk: true, config: {} })
+  
+  setConfig: (newConfig) => {
+    const current = JSON.parse(localStorage.getItem('ohilicway_config') || '{}');
+    const updated = { ...current, ...newConfig };
+    localStorage.setItem('ohilicway_config', JSON.stringify(updated));
+    return { isOk: true };
+  },
+  
+  getConfig: () => ({
+    isOk: true,
+    config: JSON.parse(localStorage.getItem('ohilicway_config') || '{}')
+  })
 };
 
-console.log("✅✅✅ Ohilicway Firebase adapter READY!");
-console.log("window.dataSdk created:", typeof window.dataSdk !== 'undefined');
-
+console.log("✅ SIMPLE adapter READY!");
