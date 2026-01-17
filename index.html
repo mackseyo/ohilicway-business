@@ -51,10 +51,6 @@
 <script src="firebase-adapter.js"></script> <!-- New SDK implementation -->
   <!-- 🔧 END OF CHANGES - REST IS YOUR ORIGINAL CODE -->
 
-<!-- Firebase (optional) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-
 <!-- OUR ADAPTER (MUST BE AFTER Firebase) -->
 <script src="firebase-adapter.js"></script>
 
@@ -265,6 +261,7 @@ setTimeout(() => {
     </div><!-- Action Buttons -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"><button id="addSaleBtn" class="bg-blue-600 text-white px-6 py-4 rounded-lg font-semibold text-lg btn-primary hover:bg-blue-700"> 🛒 Add Sale </button> <button id="addStockBtn" class="bg-purple-600 text-white px-6 py-4 rounded-lg font-semibold text-lg btn-primary hover:bg-purple-700"> 📦 Add Stock </button> <button id="addExpenseBtn" class="bg-red-600 text-white px-6 py-4 rounded-lg font-semibold text-lg btn-primary hover:bg-red-700"> 💸 Add Expense </button>
     </div><!-- Inventory Section -->
+    
     <!-- Admin Tools (Hidden - Press Ctrl+Shift+A to show) -->
 <div id="adminTools" style="display: none; margin-top: 20px;">
   <div class="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -279,6 +276,9 @@ setTimeout(() => {
       </button>
       <button onclick="importData()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
         📥 Import Backup
+      </button>
+      <button onclick="emergencyClearData()" class="px-4 py-2 bg-red-800 text-white rounded-lg hover:bg-red-900">
+        🚨 Emergency Clear
       </button>
     </div>
   </div>
@@ -820,10 +820,6 @@ function hideLoading() {
   }
 }
 
-    function hideLoading() {
-      document.getElementById('loadingIndicator').classList.add('hidden');
-    }
-
     function showNotification(message, type = 'success') {
       const colors = {
         success: 'bg-green-500',
@@ -905,9 +901,6 @@ function hideLoading() {
                   class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 btn-primary">
                   Add Sale
                 </button>
-                <button onclick="emergencyClearData()" class="px-4 py-2 bg-red-800 text-white rounded-lg hover:bg-red-900">
-  🚨 Emergency Clear
-</button>
               </div>
             </form>
           </div>
@@ -1369,9 +1362,51 @@ function emergencyClearData() {
   }, 1000);
 }
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bebc84303fd7406',t:'MTc2ODU0NzMxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bebc84303fd7406',t:'MTc2ODU0NzMxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+ <script>
+// ===== DEBUG & FIX SCRIPT =====
+console.log("🔧 DEBUG: Checking system...");
+
+// 1. Check localStorage keys
+console.log("Storage check:");
+console.log("- ohilicway_data:", localStorage.getItem('ohilicway_data') ? "EXISTS" : "MISSING");
+console.log("- ohilicway_business_data:", localStorage.getItem('ohilicway_business_data') ? "EXISTS" : "MISSING");
+
+// 2. Migrate data if needed
+if (!localStorage.getItem('ohilicway_data') && localStorage.getItem('ohilicway_business_data')) {
+  console.log("🔄 Migrating data from old key...");
+  const oldData = JSON.parse(localStorage.getItem('ohilicway_business_data') || '[]');
+  localStorage.setItem('ohilicway_data', JSON.stringify(oldData));
+  console.log(`✅ Migrated ${oldData.length} records`);
+}
+
+// 3. Force hide loading spinner after 3 seconds
+setTimeout(() => {
+  const loader = document.getElementById('loadingIndicator');
+  if (loader && !loader.classList.contains('hidden')) {
+    console.log("🛑 FORCE hiding loading spinner");
+    loader.classList.add('hidden');
+  }
+}, 3000);
+
+// 4. Test dataSdk
+setTimeout(() => {
+  console.log("🧪 Testing dataSdk...");
+  console.log("- dataSdk exists:", !!window.dataSdk);
+  console.log("- dataSdk.init:", typeof window.dataSdk?.init);
+  console.log("- dataSdk.create:", typeof window.dataSdk?.create);
+  
+  if (window.dataSdk && window.dataSdk.create) {
+    console.log("✅ dataSdk READY");
+  } else {
+    console.error("❌ dataSdk NOT READY");
+  }
+}, 1000);
+</script>
+ </body>
 
 </html>
+
 
 
 
