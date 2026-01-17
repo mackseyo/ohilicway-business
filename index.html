@@ -331,13 +331,13 @@ window.addEventListener('DOMContentLoaded', function() {
 <script>
   // Firebase configuration - REPLACE WITH YOUR ACTUAL FIREBASE CONFIG
   const firebaseConfig = {
-    apiKey: "AIzaSyD9pzRfWTwLkm7eI7E29rJyqCgPpZfzL5E", // Replace with your actual API key
-    authDomain: "ohilicway-business.firebaseapp.com", // Replace with your domain
-    projectId: "ohilicway-business", // Replace with your project ID
-    storageBucket: "ohilicway-business.appspot.com", // Replace with your bucket
-    messagingSenderId: "123456789012", // Replace with your sender ID
-    appId: "1:123456789012:web:abcdef123456" // Replace with your app ID
-  };
+  apiKey: "AIzaSyDRP9bv_PRkfvvDpUaPe6N3abO12CMoXXE",
+  authDomain: "ohilicway-business-62c29.firebaseapp.com",
+  projectId: "ohilicway-business-62c29",
+  storageBucket: "ohilicway-business-62c29.firebasestorage.app",
+  messagingSenderId: "248843335128",
+  appId: "1:248843335128:web:5477c916014faaa78a2ead"
+};
   
   // Initialize Firebase
   try {
@@ -353,136 +353,307 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 
 
-  <!-- EMERGENCY FALLBACK ADAPTER -->
+  <!-- REAL FIREBASE ADAPTER -->
 <script>
-console.log("🚀 LOADING EMERGENCY ADAPTER...");
+console.log("🚀 LOADING REAL FIREBASE ADAPTER...");
 
-// If firebase-adapter.js fails to load, create it inline
-if (typeof window.dataSdk === 'undefined') {
-  console.log("⚠️ Creating emergency fallback adapter...");
-  
-  // Storage key
-  const STORAGE_KEY = 'ohilicway_data';
-  
-  // Create dataSdk
-  window.dataSdk = {
-    async init(options) {
-      console.log("📊 Emergency dataSdk.init() called");
-      
-      // Load existing data
-      const savedData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      console.log(`📥 Loaded ${savedData.length} records`);
-      
-      if (options && options.onDataChanged) {
-        // Store callback for updates
-        window.ohilicwayUpdateCallback = options.onDataChanged;
-        // Send data immediately
-        options.onDataChanged(savedData);
-      }
-      
-            // HIDE THE SPINNER IMMEDIATELY
-      const loader = document.getElementById('loadingIndicator');
-      if (loader) {
-        loader.classList.add('hidden');
-        console.log("✅ Emergency: Hidden loading spinner immediately");
-      }
-      
-      return { isOk: true };
-    },
-    
-    async create(data) {
-      console.log(`➕ CREATE: ${data.type} - ${data.product_name || data.expense_name}`);
-      
-      try {
-        // Get current data
-        const currentData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        
-        // Add with ID
-        const newItem = {
-          ...data,
-          id: Date.now(),
-          created_at: new Date().toISOString()
-        };
-        
-        // Save
-        currentData.push(newItem);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
-        console.log("💾 Saved to localStorage");
-        
-        // Update UI
-        if (window.ohilicwayUpdateCallback) {
-          window.ohilicwayUpdateCallback(currentData);
-        }
-        
-        // HIDE LOADING SPINNER
-        setTimeout(() => {
-          const loader = document.getElementById('loadingIndicator');
-          if (loader) {
-            loader.classList.add('hidden');
-          }
-        }, 300);
-        
-        // Show success
-        if (typeof showNotification === 'function') {
-          showNotification(`✅ ${data.type} saved successfully!`, 'success');
-        }
-        
-        return { isOk: true, id: newItem.id };
-        
-      } catch (error) {
-        console.error("❌ Save error:", error);
-        
-        // STILL hide loading on error
-        setTimeout(() => {
-          const loader = document.getElementById('loadingIndicator');
-          if (loader) {
-            loader.classList.add('hidden');
-          }
-        }, 300);
-        
-        return { isOk: false, error: error.message };
-      }
-    },
-    
-    async update(id, data) {
-      console.log("✏️ UPDATE:", id);
-      const currentData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      const index = currentData.findIndex(item => item.id === id);
-      if (index !== -1) {
-        currentData[index] = { ...currentData[index], ...data };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
-        if (window.ohilicwayUpdateCallback) window.ohilicwayUpdateCallback(currentData);
-      }
-      return { isOk: true };
-    },
-    
-    async delete(id) {
-      console.log("🗑️ DELETE:", id);
-      const currentData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      const newData = currentData.filter(item => item.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
-      if (window.ohilicwayUpdateCallback) window.ohilicwayUpdateCallback(newData);
-      return { isOk: true };
+// Storage keys
+const LOCAL_STORAGE_KEY = 'ohilicway_data';
+const CONFIG_STORAGE_KEY = 'ohilicway_config';
+
+// Global state
+let firestore = null;
+let isFirebaseReady = false;
+let currentData = [];
+
+// Initialize Firebase connection
+function initializeFirebaseConnection() {
+  try {
+    if (typeof firebase !== 'undefined' && firebase.apps.length > 0 && window.firebaseReady) {
+      firestore = firebase.firestore();
+      isFirebaseReady = true;
+      console.log("✅ Firebase Firestore connected!");
+      return true;
+    } else {
+      console.log("⚠️ Firebase not available, will use localStorage");
+      return false;
     }
-  };
+  } catch (error) {
+    console.error("❌ Firebase connection error:", error);
+    return false;
+  }
+}
+
+// ===== DATA SDK IMPLEMENTATION =====
+window.dataSdk = {
+  async init(options) {
+    console.log("📊 dataSdk.init() called");
+    
+    // Initialize Firebase connection
+    initializeFirebaseConnection();
+    
+    // Try to load from Firebase first
+    let data = [];
+    
+    if (isFirebaseReady && firestore) {
+      try {
+        console.log("📥 Loading data from Firebase...");
+        const snapshot = await firestore.collection('business_data').orderBy('timestamp', 'desc').get();
+        data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log(`✅ Loaded ${data.length} records from Firebase`);
+        
+        // Save to localStorage for offline use
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+        
+      } catch (firebaseError) {
+        console.log("⚠️ Couldn't load from Firebase, using localStorage:", firebaseError.message);
+        // Fallback to localStorage
+        data = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+        console.log(`📥 Loaded ${data.length} records from localStorage`);
+      }
+    } else {
+      // Use localStorage only
+      data = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+      console.log(`📥 Loaded ${data.length} records from localStorage`);
+    }
+    
+    // Store callback for updates
+    if (options && options.onDataChanged) {
+      window.ohilicwayUpdateCallback = options.onDataChanged;
+      options.onDataChanged(data);
+    }
+    
+    // Hide loading spinner
+    const loader = document.getElementById('loadingIndicator');
+    if (loader) loader.classList.add('hidden');
+    
+    return { isOk: true };
+  },
   
-  // Create elementSdk
-  window.elementSdk = {
-    init: (config) => {
-      console.log("🎨 Emergency elementSdk.init() called");
-      if (config?.defaultConfig) {
-        localStorage.setItem('ohilicway_config', JSON.stringify(config.defaultConfig));
+  async create(data) {
+    console.log(`➕ CREATE: ${data.type} - ${data.product_name || data.expense_name}`);
+    
+    try {
+      // Show loading
+      if (typeof showLoading === 'function') showLoading();
+      
+      // Add metadata
+      const newItem = {
+        ...data,
+        id: Date.now().toString(),
+        timestamp: data.timestamp || Date.now(),
+        created_at: new Date().toISOString(),
+        synced_to_firebase: false
+      };
+      
+      // 1. Save to localStorage immediately
+      let currentLocalData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+      currentLocalData.unshift(newItem); // Add to beginning
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(currentLocalData));
+      console.log("💾 Saved to localStorage");
+      
+      // 2. Try to save to Firebase
+      let firebaseId = null;
+      if (isFirebaseReady && firestore) {
+        try {
+          console.log("💾 Saving to Firebase...");
+          const docRef = await firestore.collection('business_data').add({
+            ...newItem,
+            synced_to_firebase: true,
+            firebase_sync_time: new Date().toISOString()
+          });
+          firebaseId = docRef.id;
+          console.log("✅ Saved to Firebase with ID:", firebaseId);
+          
+          // Update localStorage with Firebase ID
+          newItem.firebase_id = firebaseId;
+          newItem.synced_to_firebase = true;
+          currentLocalData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+          const index = currentLocalData.findIndex(item => item.id === newItem.id);
+          if (index !== -1) {
+            currentLocalData[index] = newItem;
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(currentLocalData));
+          }
+          
+        } catch (firebaseError) {
+          console.log("⚠️ Couldn't save to Firebase, stored locally:", firebaseError.message);
+          // Data is already in localStorage, will sync later
+        }
+      }
+      
+      // Update UI
+      if (window.ohilicwayUpdateCallback) {
+        window.ohilicwayUpdateCallback(currentLocalData);
+      }
+      
+      // Hide loading spinner
+      if (typeof hideLoading === 'function') hideLoading();
+      
+      // Show success
+      if (typeof showNotification === 'function') {
+        showNotification(`✅ ${data.type} saved successfully!`, 'success');
+      }
+      
+      return { isOk: true, id: newItem.id, firebaseId: firebaseId };
+      
+    } catch (error) {
+      console.error("❌ Save error:", error);
+      
+      // Hide loading on error
+      if (typeof hideLoading === 'function') hideLoading();
+      
+      if (typeof showNotification === 'function') {
+        showNotification('Failed to save data', 'error');
+      }
+      
+      return { isOk: false, error: error.message };
+    }
+  },
+  
+  async update(id, data) {
+    console.log("✏️ UPDATE:", id);
+    try {
+      // Update localStorage
+      let currentLocalData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+      const index = currentLocalData.findIndex(item => item.id === id);
+      if (index !== -1) {
+        currentLocalData[index] = { ...currentLocalData[index], ...data };
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(currentLocalData));
+        
+        // Try to update Firebase
+        if (isFirebaseReady && firestore && currentLocalData[index].firebase_id) {
+          try {
+            await firestore.collection('business_data').doc(currentLocalData[index].firebase_id).update(data);
+            console.log("✅ Updated in Firebase");
+          } catch (firebaseError) {
+            console.log("⚠️ Couldn't update Firebase:", firebaseError.message);
+          }
+        }
+        
+        if (window.ohilicwayUpdateCallback) window.ohilicwayUpdateCallback(currentLocalData);
       }
       return { isOk: true };
-    },
-    setConfig: () => ({ isOk: true }),
-    getConfig: () => ({ isOk: true, config: {} })
-  };
+    } catch (error) {
+      return { isOk: false, error: error.message };
+    }
+  },
   
-  console.log("✅✅✅ EMERGENCY ADAPTER READY!");
-}
+  async delete(id) {
+    console.log("🗑️ DELETE:", id);
+    try {
+      // Delete from localStorage
+      let currentLocalData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+      const itemToDelete = currentLocalData.find(item => item.id === id);
+      currentLocalData = currentLocalData.filter(item => item.id !== id);
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(currentLocalData));
+      
+      // Try to delete from Firebase
+      if (isFirebaseReady && firestore && itemToDelete?.firebase_id) {
+        try {
+          await firestore.collection('business_data').doc(itemToDelete.firebase_id).delete();
+          console.log("✅ Deleted from Firebase");
+        } catch (firebaseError) {
+          console.log("⚠️ Couldn't delete from Firebase:", firebaseError.message);
+        }
+      }
+      
+      if (window.ohilicwayUpdateCallback) window.ohilicwayUpdateCallback(currentLocalData);
+      return { isOk: true };
+    } catch (error) {
+      return { isOk: false, error: error.message };
+    }
+  }
+};
+
+// ===== ELEMENT SDK IMPLEMENTATION =====
+window.elementSdk = {
+  init: (config) => {
+    console.log("🎨 elementSdk.init() called");
+    
+    // Load or save config
+    let savedConfig = JSON.parse(localStorage.getItem(CONFIG_STORAGE_KEY) || '{}');
+    if (config?.defaultConfig) {
+      savedConfig = { ...savedConfig, ...config.defaultConfig };
+      localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(savedConfig));
+      
+      // Also try to save to Firebase if available
+      if (isFirebaseReady && firestore) {
+        try {
+          firestore.collection('config').doc('business_config').set(savedConfig, { merge: true });
+          console.log("✅ Config saved to Firebase");
+        } catch (error) {
+          console.log("⚠️ Couldn't save config to Firebase");
+        }
+      }
+    }
+    
+    return { isOk: true, config: savedConfig };
+  },
+  
+  setConfig: (newConfig) => {
+    const currentConfig = JSON.parse(localStorage.getItem(CONFIG_STORAGE_KEY) || '{}');
+    const updatedConfig = { ...currentConfig, ...newConfig };
+    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(updatedConfig));
+    
+    // Also save to Firebase
+    if (isFirebaseReady && firestore) {
+      try {
+        firestore.collection('config').doc('business_config').set(updatedConfig, { merge: true });
+      } catch (error) {
+        console.log("⚠️ Couldn't update config in Firebase");
+      }
+    }
+    
+    return { isOk: true };
+  },
+  
+  getConfig: () => {
+    const config = JSON.parse(localStorage.getItem(CONFIG_STORAGE_KEY) || '{}');
+    return { isOk: true, config };
+  }
+};
+
+console.log("✅✅✅ REAL FIREBASE ADAPTER READY!");
+
+// Auto-sync function (runs every 5 minutes)
+setInterval(async () => {
+  if (isFirebaseReady && firestore) {
+    try {
+      const localData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+      const unsyncedItems = localData.filter(item => !item.synced_to_firebase);
+      
+      if (unsyncedItems.length > 0) {
+        console.log(`🔄 Syncing ${unsyncedItems.length} items to Firebase...`);
+        
+        for (const item of unsyncedItems) {
+          try {
+            const docRef = await firestore.collection('business_data').add({
+              ...item,
+              synced_to_firebase: true,
+              firebase_sync_time: new Date().toISOString()
+            });
+            
+            // Update localStorage with Firebase ID
+            item.firebase_id = docRef.id;
+            item.synced_to_firebase = true;
+          } catch (error) {
+            console.log(`⚠️ Couldn't sync item ${item.id}:`, error.message);
+          }
+        }
+        
+        // Update localStorage
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localData));
+        console.log("✅ Auto-sync completed");
+      }
+    } catch (error) {
+      console.log("⚠️ Auto-sync error:", error.message);
+    }
+  }
+}, 300000); // 5 minutes
+
 </script>
 
+  
 <!-- YOUR ORIGINAL BUSINESS LOGIC - 100% UNCHANGED -->
 
   <!-- YOUR ORIGINAL BUSINESS LOGIC - 100% UNCHANGED -->
@@ -1536,6 +1707,7 @@ function emergencyClearData() {
 </script>
  </body>
 </html>
+
 
 
 
