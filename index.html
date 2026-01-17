@@ -50,6 +50,49 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 <script src="firebase-adapter.js"></script> <!-- New SDK implementation -->
   <!-- 🔧 END OF CHANGES - REST IS YOUR ORIGINAL CODE -->
+
+<!-- Firebase (optional) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+<!-- OUR ADAPTER (MUST BE AFTER Firebase) -->
+<script src="firebase-adapter.js"></script>
+
+<!-- EMERGENCY FALLBACK (if adapter fails) -->
+<script>
+// EMERGENCY FALLBACK - Loads if adapter fails
+setTimeout(() => {
+  if (!window.dataSdk) {
+    console.log("⚠️ Emergency: Creating dataSdk...");
+    window.dataSdk = {
+      async init(options) {
+        console.log("🚑 EMERGENCY dataSdk.init()");
+        const data = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+        if (options?.onDataChanged) {
+          window._emergencyCallback = options.onDataChanged;
+          options.onDataChanged(data);
+        }
+        return { isOk: true };
+      },
+      async create(data) {
+        console.log("🚑 EMERGENCY save:", data.type);
+        const items = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
+        items.push({ ...data, id: Date.now() });
+        localStorage.setItem('ohilicway_data', JSON.stringify(items));
+        
+        if (window._emergencyCallback) {
+          window._emergencyCallback(items);
+        }
+        
+        alert(`✅ ${data.type} saved (emergency mode)`);
+        return { isOk: true };
+      }
+    };
+    window.elementSdk = { init: () => ({ isOk: true }) };
+    console.log("✅ Emergency SDKs created");
+  }
+}, 500);
+</script>
   
   <style>
     body {
@@ -1308,6 +1351,7 @@ function emergencyClearData() {
  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bebc84303fd7406',t:'MTc2ODU0NzMxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 
 </html>
+
 
 
 
