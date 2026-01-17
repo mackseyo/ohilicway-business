@@ -54,41 +54,7 @@
 <!-- OUR ADAPTER (MUST BE AFTER Firebase) -->
 <script src="firebase-adapter.js"></script>
 
-<!-- EMERGENCY FALLBACK (if adapter fails) -->
-<script>
-// EMERGENCY FALLBACK - Loads if adapter fails
-setTimeout(() => {
-  if (!window.dataSdk) {
-    console.log("⚠️ Emergency: Creating dataSdk...");
-    window.dataSdk = {
-      async init(options) {
-        console.log("🚑 EMERGENCY dataSdk.init()");
-        const data = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-        if (options?.onDataChanged) {
-          window._emergencyCallback = options.onDataChanged;
-          options.onDataChanged(data);
-        }
-        return { isOk: true };
-      },
-      async create(data) {
-        console.log("🚑 EMERGENCY save:", data.type);
-        const items = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
-        items.push({ ...data, id: Date.now() });
-        localStorage.setItem('ohilicway_data', JSON.stringify(items));
-        
-        if (window._emergencyCallback) {
-          window._emergencyCallback(items);
-        }
-        
-        alert(`✅ ${data.type} saved (emergency mode)`);
-        return { isOk: true };
-      }
-    };
-    window.elementSdk = { init: () => ({ isOk: true }) };
-    console.log("✅ Emergency SDKs created");
-  }
-}, 500);
-</script>
+
   
   <style>
     body {
@@ -1364,48 +1330,76 @@ function emergencyClearData() {
   </script>
  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bebc84303fd7406',t:'MTc2ODU0NzMxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
  <script>
-// ===== DEBUG & FIX SCRIPT =====
-console.log("🔧 DEBUG: Checking system...");
+<script>
+// ===== DIRECT SPINNER FIX =====
+console.log("🎯 LOADING SPINNER FIX ACTIVATED");
 
-// 1. Check localStorage keys
-console.log("Storage check:");
-console.log("- ohilicway_data:", localStorage.getItem('ohilicway_data') ? "EXISTS" : "MISSING");
-console.log("- ohilicway_business_data:", localStorage.getItem('ohilicway_business_data') ? "EXISTS" : "MISSING");
+// 1. Override showLoading to auto-hide
+const originalShowLoading = window.showLoading;
+window.showLoading = function() {
+  console.log("⏳ Show loading (with auto-hide)");
+  
+  if (typeof originalShowLoading === 'function') {
+    originalShowLoading();
+  }
+  
+  // AUTO-HIDE after 3 seconds (SAFETY NET)
+  setTimeout(() => {
+    console.log("⏰ Auto-hiding spinner after timeout");
+    hideLoading();
+  }, 3000);
+};
 
-// 2. Migrate data if needed
-if (!localStorage.getItem('ohilicway_data') && localStorage.getItem('ohilicway_business_data')) {
-  console.log("🔄 Migrating data from old key...");
-  const oldData = JSON.parse(localStorage.getItem('ohilicway_business_data') || '[]');
-  localStorage.setItem('ohilicway_data', JSON.stringify(oldData));
-  console.log(`✅ Migrated ${oldData.length} records`);
-}
+// 2. Override hideLoading to be more aggressive
+const originalHideLoading = window.hideLoading;
+window.hideLoading = function() {
+  console.log("✅ Hide loading (enhanced)");
+  
+  if (typeof originalHideLoading === 'function') {
+    originalHideLoading();
+  }
+  
+  // Direct DOM manipulation
+  const loader = document.getElementById('loadingIndicator');
+  if (loader) {
+    loader.classList.add('hidden');
+    console.log("✅ Direct DOM hide");
+  }
+  
+  // Clear any modal
+  const modal = document.getElementById('modalContainer');
+  if (modal) {
+    modal.innerHTML = '';
+    console.log("✅ Modal cleared");
+  }
+};
 
-// 3. Force hide loading spinner after 3 seconds
+// 3. Force hide any existing spinner
 setTimeout(() => {
   const loader = document.getElementById('loadingIndicator');
   if (loader && !loader.classList.contains('hidden')) {
-    console.log("🛑 FORCE hiding loading spinner");
+    console.log("🛑 FORCE hiding stuck spinner");
     loader.classList.add('hidden');
   }
-}, 3000);
-
-// 4. Test dataSdk
-setTimeout(() => {
-  console.log("🧪 Testing dataSdk...");
-  console.log("- dataSdk exists:", !!window.dataSdk);
-  console.log("- dataSdk.init:", typeof window.dataSdk?.init);
-  console.log("- dataSdk.create:", typeof window.dataSdk?.create);
-  
-  if (window.dataSdk && window.dataSdk.create) {
-    console.log("✅ dataSdk READY");
-  } else {
-    console.error("❌ dataSdk NOT READY");
-  }
 }, 1000);
+
+// 4. Test the system
+setTimeout(() => {
+  console.log("🧪 SYSTEM TEST:");
+  console.log("- dataSdk exists:", !!window.dataSdk);
+  console.log("- hideLoading function:", typeof hideLoading);
+  console.log("- Loading element:", document.getElementById('loadingIndicator') ? "FOUND" : "MISSING");
+  
+  // Create test data
+  if (window.dataSdk && window.dataSdk.create) {
+    console.log("✅ System READY for use");
+  }
+}, 2000);
 </script>
  </body>
 
 </html>
+
 
 
 
