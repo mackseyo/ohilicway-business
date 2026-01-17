@@ -342,8 +342,6 @@ window.addEventListener('DOMContentLoaded', function() {
   }
 </script>
 
-<!-- Now load the adapter -->
-<script src="firebase-adapter.js"></script>
 
   <!-- EMERGENCY FALLBACK ADAPTER -->
 <script>
@@ -372,14 +370,12 @@ if (typeof window.dataSdk === 'undefined') {
         options.onDataChanged(savedData);
       }
       
-      // HIDE THE SPINNER IMMEDIATELY
-      setTimeout(() => {
-        const loader = document.getElementById('loadingIndicator');
-        if (loader) {
-          loader.classList.add('hidden');
-          console.log("✅ Emergency: Hidden loading spinner");
-        }
-      }, 100);
+            // HIDE THE SPINNER IMMEDIATELY
+      const loader = document.getElementById('loadingIndicator');
+      if (loader) {
+        loader.classList.add('hidden');
+        console.log("✅ Emergency: Hidden loading spinner immediately");
+      }
       
       return { isOk: true };
     },
@@ -1434,36 +1430,6 @@ function importData() {
   input.click();
 }
 
-   
-function clearAllData() {
-  if (confirm('⚠️ DELETE ALL business data? This will remove ALL sales, purchases, expenses, and inventory!')) {
-    console.log("🗑️ Clearing ALL data...");
-    
-    // 1. Clear localStorage
-    localStorage.removeItem('ohilicway_data');
-    localStorage.removeItem('ohilicway_config');
-    
-    // 2. Clear Firebase if connected
-    if (typeof firebase !== 'undefined' && firebase.firestore) {
-      try {
-        const db = firebase.firestore();
-        // We can't delete entire collection from frontend, but we can delete documents
-        // Show message about Firebase data
-        console.log("⚠️ Firebase data must be cleared manually from Firebase Console");
-      } catch (error) {
-        console.log("Firebase not configured for clearing");
-      }
-    }
-    
-    // 3. Force page reload with cache clear
-    showNotification('ALL DATA CLEARED! Reloading...', 'info');
-    setTimeout(() => {
-      window.location.href = window.location.href + '?clear=' + Date.now(); // Force reload
-    }, 1500);
-  }
-}
-
-
    // EMERGENCY DATA CLEAR - Works 100%
 function emergencyClearData() {
   console.log("🚨 EMERGENCY DATA CLEAR");
@@ -1485,137 +1451,42 @@ function emergencyClearData() {
 }
   </script>
  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bebc84303fd7406',t:'MTc2ODU0NzMxMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
- <script>
+  
+
+  <!-- SIMPLE SPINNER FIX -->
 <script>
-// ===== DIRECT SPINNER FIX =====
-console.log("🎯 LOADING SPINNER FIX ACTIVATED");
-
-// 1. Override showLoading to auto-hide
-const originalShowLoading = window.showLoading;
-window.showLoading = function() {
-  console.log("⏳ Show loading (with auto-hide)");
+  // Wait for page to fully load
+  window.addEventListener('load', function() {
+    // Hide spinner after 1 second
+    setTimeout(function() {
+      const loader = document.getElementById('loadingIndicator');
+      if (loader) {
+        loader.classList.add('hidden');
+        console.log("✅ Simple fix: Spinner hidden");
+      }
+    }, 1000);
+    
+    // Force hide after 3 seconds (safety)
+    setTimeout(function() {
+      const loader = document.getElementById('loadingIndicator');
+      if (loader && !loader.classList.contains('hidden')) {
+        loader.classList.add('hidden');
+        console.log("🛑 Safety: Force-hid spinner");
+      }
+    }, 3000);
+  });
   
-  if (typeof originalShowLoading === 'function') {
-    originalShowLoading();
-  }
-  
-  // AUTO-HIDE after 3 seconds (SAFETY NET)
-  setTimeout(() => {
-    console.log("⏰ Auto-hiding spinner after timeout");
-    hideLoading();
-  }, 3000);
-};
-
-// 2. Override hideLoading to be more aggressive
-const originalHideLoading = window.hideLoading;
-window.hideLoading = function() {
-  console.log("✅ Hide loading (enhanced)");
-  
-  if (typeof originalHideLoading === 'function') {
-    originalHideLoading();
-  }
-  
-  // Direct DOM manipulation
-  const loader = document.getElementById('loadingIndicator');
-  if (loader) {
-    loader.classList.add('hidden');
-    console.log("✅ Direct DOM hide");
-  }
-  
-  // Clear any modal
-  const modal = document.getElementById('modalContainer');
-  if (modal) {
-    modal.innerHTML = '';
-    console.log("✅ Modal cleared");
-  }
-};
-
-// 3. Force hide any existing spinner
-setTimeout(() => {
-  const loader = document.getElementById('loadingIndicator');
-  if (loader && !loader.classList.contains('hidden')) {
-    console.log("🛑 FORCE hiding stuck spinner");
-    loader.classList.add('hidden');
-  }
-}, 1000);
-
-// 4. Test the system
-setTimeout(() => {
-  console.log("🧪 SYSTEM TEST:");
-  console.log("- dataSdk exists:", !!window.dataSdk);
-  console.log("- hideLoading function:", typeof hideLoading);
-  console.log("- Loading element:", document.getElementById('loadingIndicator') ? "FOUND" : "MISSING");
-  
-  // Create test data
-  if (window.dataSdk && window.dataSdk.create) {
-    console.log("✅ System READY for use");
-  }
-}, 2000);
-</script>
-// ===== EMERGENCY SPINNER FIX =====
-document.addEventListener('DOMContentLoaded', function() {
-  // Force hide loading spinner after 2 seconds max
-  setTimeout(function() {
+  // Also hide immediately if DOM is ready
+  if (document.readyState === 'interactive' || document.readyState === 'complete') {
     const loader = document.getElementById('loadingIndicator');
     if (loader) {
       loader.classList.add('hidden');
-      console.log("✅ Emergency: Hidden stuck loading spinner");
     }
-  }, 2000);
-  
-  // Initialize the app with error handling
-  setTimeout(initializeApp, 100);
-});
-
-// Override showLoading with timeout protection
-const originalShowLoading = window.showLoading;
-window.showLoading = function() {
-  console.log("⏳ Show loading (protected)");
-  
-  if (typeof originalShowLoading === 'function') {
-    originalShowLoading();
   }
-  
-  // Auto-hide after 4 seconds maximum
-  setTimeout(function() {
-    window.hideLoading();
-  }, 4000);
-};
-  <!-- FORCE HIDE SPINNER ON LOAD -->
-<script>
-// This runs immediately when page loads
-(function() {
-  console.log("🎯 FORCE HIDING SPINNER...");
-  
-  // Method 1: Immediate hide
-  const loader = document.getElementById('loadingIndicator');
-  if (loader) {
-    loader.classList.add('hidden');
-    console.log("✅ Spinner hidden immediately");
-  }
-  
-  // Method 2: Hide after 500ms (safety)
-  setTimeout(() => {
-    const loader2 = document.getElementById('loadingIndicator');
-    if (loader2 && !loader2.classList.contains('hidden')) {
-      loader2.classList.add('hidden');
-      console.log("✅ Spinner hidden after timeout");
-    }
-  }, 500);
-  
-  // Method 3: Hide after 2 seconds (emergency)
-  setTimeout(() => {
-    const loader3 = document.getElementById('loadingIndicator');
-    if (loader3 && !loader3.classList.contains('hidden')) {
-      loader3.classList.add('hidden');
-      console.log("🛑 EMERGENCY: Forced spinner hide");
-    }
-  }, 2000);
-})();
 </script>
  </body>
-
 </html>
+
 
 
 
