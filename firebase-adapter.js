@@ -7,7 +7,7 @@ window.dataSdk = {
     console.log("📊 dataSdk.init() called");
     
     // Load existing data
-    const savedData = JSON.parse(localStorage.getItem('ohilicway_business_data') || '[]');
+    const savedData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
     console.log(`📊 Loaded ${savedData.length} business records`);
     
     if (options && options.onDataChanged) {
@@ -25,7 +25,7 @@ window.dataSdk = {
     
     try {
       // Get current data
-      const currentData = JSON.parse(localStorage.getItem('ohilicway_business_data') || '[]');
+      const currentData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
       
       // Add with ID
       const newItem = {
@@ -36,7 +36,7 @@ window.dataSdk = {
       
       // Save
       currentData.push(newItem);
-      localStorage.setItem('ohilicway_business_data', JSON.stringify(currentData));
+      localStorage.setItem('ohilicway_data', JSON.stringify(currentData));
       
       // Update UI
       if (window.businessDataCallback) {
@@ -69,7 +69,7 @@ window.dataSdk = {
   
   async update(id, data) {
     console.log("✏️ Updating:", id);
-    const currentData = JSON.parse(localStorage.getItem('ohilicway_business_data') || '[]');
+    const currentData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
     const index = currentData.findIndex(item => item.id === id);
     if (index !== -1) {
       currentData[index] = { ...currentData[index], ...data };
@@ -81,9 +81,9 @@ window.dataSdk = {
   
   async delete(id) {
     console.log("🗑️ Deleting:", id);
-    const currentData = JSON.parse(localStorage.getItem('ohilicway_business_data') || '[]');
+    const currentData = JSON.parse(localStorage.getItem('ohilicway_data') || '[]');
     const newData = currentData.filter(item => item.id !== id);
-    localStorage.setItem('ohilicway_business_data', JSON.stringify(newData));
+    localStorage.setItem('ohilicway_data', JSON.stringify(newData));
     if (window.businessDataCallback) window.businessDataCallback(newData);
     return { isOk: true };
   }
@@ -100,3 +100,4 @@ window.elementSdk = {
 };
 
 console.log("✅ BUSINESS ADAPTER READY FOR USE");
+
